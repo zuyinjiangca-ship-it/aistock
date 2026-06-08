@@ -53,7 +53,6 @@ def get_data(ticker, session, retries=3):
     return None
 
 def analyze_stock_raw(ticker):
-    """只负责纯粹的数学指标测算，返回标准化多空信号元数据，不掺杂任何翻译语言，极大加快缓存速度"""
     session = get_secure_session()
     df = get_data(ticker, session)
 
@@ -186,10 +185,9 @@ def analyze_stock_raw(ticker):
     }
 
 # ==========================================
-# 🖥️ 第二部分：前端数据渲染交互主控 (引入内存保险箱)
+# 🖥️ 第二部分：前端数据渲染交互主控
 # ==========================================
 
-# 🌐 侧边栏高规格多语言切换器 (放在最外面，任何时刻点击都能0秒瞬切语言)
 lang_choice = st.sidebar.radio("🌐 Language / 语言切换", ["🇨🇳 中文", "🇺🇸 English"])
 lang = "EN" if lang_choice == "🇺🇸 English" else "CN"
 
@@ -213,7 +211,6 @@ ui_meta = {
 st.title(ui_meta["title"])
 st.caption(ui_meta["caption"])
 
-# 🛡️ 核心底层逻辑：初始化 Session State 独立内存常驻保险箱
 if "raw_scan_results" not in st.session_state:
     st.session_state.raw_scan_results = None
 if "failed_watchlist" not in st.session_state:
@@ -243,7 +240,6 @@ st.sidebar.write(f"{ui_meta['stat_text']}`{len(combined_tickers)}`{ui_meta['stat
 
 @st.cache_data(ttl=600)
 def run_full_heavy_scan(tickers_list):
-    """重型计算函数：只和股票池名单挂钩，彻底摆脱语言切换对缓存的无谓消耗"""
     results = []
     failed = []
     for t in tickers_list:
@@ -257,23 +253,19 @@ def run_full_heavy_scan(tickers_list):
             failed.append(t)
     return pd.DataFrame(results), failed
 
-# 点击扫描时，将结果死死锁进常驻保险箱 st.session_state
 if st.button(ui_meta["btn_scan"], type="primary"):
     with st.spinner(ui_meta["spinner_text"]):
         df, failed_tickers = run_full_heavy_scan(combined_tickers)
         st.session_state.raw_scan_results = df
         st.session_state.failed_watchlist = failed_tickers
 
-# 错误标的警报常驻提示
 user_failed = [f for f in st.session_state.failed_watchlist if f in custom_tickers]
 if user_failed:
     st.sidebar.error(f"{ui_meta['err_fetch']} `{', '.join(user_failed)}`")
 
-# 💎 只要保险箱里有历史扫描结果，就在最前端根据当前的语言进行【动态高规格翻译渲染】！
 if st.session_state.raw_scan_results is not None and not st.session_state.raw_scan_results.empty:
     df_raw = st.session_state.raw_scan_results.copy()
 
-    # 翻译射影字典矩阵
     if lang == "EN":
         trans_trend = {"gold_cross": "🎯 Golden Cross", "dead_cross": "🚨 Death Cross", "bull": "📈 Bullish Trend", "bear": "📉 Bearish Momentum"}
         trans_level = {"breakout": "🚀 Breakout", "breakdown": "⚠️ Breakdown", "range": "Range Bound"}
@@ -293,7 +285,6 @@ if st.session_state.raw_scan_results is not None and not st.session_state.raw_sc
             "pullback": "📥 低吸买入", "hold": "👌 趋势良好 / 持股", "wait": "⏳ 震荡蓄势 / 观望"
         }
 
-    # 在最前端执行动态拼装，不走底层抓取，速度快到飞起
     processed_rows = []
     for _, row in df_raw.iterrows():
         rsi_trend = f"🔺+{round(row['rsi_change'], 1)}" if row['rsi_change'] > 0 else f"🔻{round(row['rsi_change'], 1)}"
@@ -323,7 +314,6 @@ if st.session_state.raw_scan_results is not None and not st.session_state.raw_sc
     display_df = pd.DataFrame(processed_rows)
     display_df = display_df.sort_values(by="Score", ascending=False).reset_index(drop=True)
 
-    # 国际化列名映射
     rename_dict = {
         "Ticker": "Ticker" if lang == "EN" else "代码",
         "Price": "Price" if lang == "EN" else "当前价",
@@ -344,9 +334,25 @@ if st.session_state.raw_scan_results is not None and not st.session_state.raw_sc
 
     st.subheader(ui_meta['board_title'])
     
+    # 🔥 核心升级：改用三引号定义多行样式字符串，100% 免疫任何换行引起的报错！
     def style_strategy(val):
         val_str = str(val)
         if any(x in val_str for x in ["强力买入", "金叉", "黄金买点", "Strong Buy", "Golden Cross", "Golden Entry"]):
-            return 'background-color: #e6f4ea; color: #137333; font-weight: bold;'
+            return """background-color: #e6f4ea; color: #137333; font-weight: bold;"""
         if any(x in val_str for x in ["低吸", "分批", "左侧", "Pullback Buy", "Left-Side Entry"]):
-            return 'background-
+            return """background-color: #f1f8e9; color: #558b2f; font-weight: bold;"""
+        if any(x in val_str for x in ["假突破", "预警", "暂勿追", "Fake Out", "Avoid Chasing"]):
+            return """background-color: #fffde7; color: #f57f17; font-weight: bold;"""
+        if any(x in val_str for x in ["减仓", "止损", "Reduce", "Stop Loss"]):
+            return """background-color: #fce8e6; color: #c5221f; font-weight: bold;"""
+        return """"""
+    
+    styled_df = final_render_df.style.map(style_strategy, subset=[target_strategy_col])
+    
+    st.dataframe(styled_df, use_container_width=True, height=480)
+
+    st.subheader(ui_meta['top5_title'])
+    st.dataframe(final_render_df.head(5), use_container_width=True, height=210)
+
+st.sidebar.markdown("---")
+st.sidebar.info(ui_meta["title"] + " v3.0-Fixed")
