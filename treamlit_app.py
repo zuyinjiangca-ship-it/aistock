@@ -10,11 +10,10 @@ from tickers import TICKERS
 # 开启全宽布局
 st.set_page_config(
     layout="wide", 
-    page_title="AI Trading Pro", 
-    page_icon="🚀"
+    page_title="AI Trading Pro"
 )
 
-# 🎨 视觉皮肤：柔和舒适的浅色奶油白背景
+# 🎨 智能皮肤：柔和舒适的浅色奶油白看盘背景
 st.markdown("""
     <style>
     .main, .stApp {
@@ -22,85 +21,21 @@ st.markdown("""
         color: #333 !important;
     }
     .block-container {
-        padding-top: 0.5rem !important;
+        padding-top: 0.6rem !important;
         padding-bottom: 0rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-left: 1.5rem !important;
+        padding-right: 1.5rem !important;
     }
     [data-testid="stVerticalBlock"] {
-        gap: 0.3rem !important;
+        gap: 0.4rem !important;
     }
     [data-testid="stSidebar"] {
         background-color: #ffffff !important;
-        border-right: 1px solid #d1d1d1 !important;
-    }
-    [data-testid="stSidebar"] p {
-        color: #333 !important;
-    }
-    .terminal-title {
-        font-family: 'Courier New', monospace;
-        font-weight: 900 !important;
-        background: linear-gradient(45deg, #0047AB, #56d364);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 1.6rem !important;
-        margin-bottom: 0rem !important;
-        padding-bottom: 0rem !important;
-    }
-    .terminal-caption {
-        color: #666 !important;
-        font-size: 0.8rem !important;
-        border-left: 3px solid #0047AB;
-        padding-left: 8px;
-        margin-bottom: 0.5rem !important;
-    }
-    .section-title {
-        color: #0047AB !important;
-        font-weight: bold !important;
-        border-bottom: 1px solid #d1d1d1;
-        padding-bottom: 2px;
-        margin-top: 0.2rem !important;
-        margin-bottom: 0.2rem !important;
-        font-size: 1rem !important;
-    }
-    .kpi-container {
-        display: flex;
-        gap: 0.5rem;
-        margin-bottom: 0.2rem;
-    }
-    .kpi-card {
-        flex: 1;
-        background: #f1f1f1;
-        border: 1px solid #d1d1d1;
-        border-radius: 6px;
-        padding: 0.4rem 0.8rem;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    }
-    .kpi-label {
-        font-size: 0.7rem;
-        color: #666;
-        text-transform: uppercase;
-    }
-    .kpi-value {
-        font-size: 1.4rem;
-        font-weight: bold;
-        color: #0047AB;
-        margin-top: 0.1rem;
-    }
-    div.stButton > button:first-child {
-        background: linear-gradient(135deg, #6A1B9A 0%, #238636 100%) !important;
-        color: #ffffff !important;
-        border: none !important;
-        border-radius: 6px !important;
-        padding: 0.4rem 2rem !important;
-        font-size: 0.95rem !important;
-        font-weight: bold !important;
-        width: 100% !important;
+        border-right: 1px solid #e1e1e1 !important;
     }
     .stDataFrame {
         background-color: #ffffff !important;
         border: 1px solid #d1d1d1 !important;
-        border-radius: 6px !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -198,6 +133,7 @@ def analyze_stock_raw(ticker):
     else:
         level_raw = "range"
 
+    # 安全因子计算短句化
     sf = 1.015
     suggested_buy_price = round(support * sf, 2)
 
@@ -227,7 +163,7 @@ def analyze_stock_raw(ticker):
     elif is_vol_dump: score -= 10
     score = max(10, min(95, score))
 
-    # 🔥 核心重构：拆解成超短布林变量，100% 破解行尾换行截断魔咒
+    # 6. 超短布林条件卡位
     c_dump = is_vol_dump
     c_dead = (trend_raw == "dead_cross")
     c_drop = (level_raw == "breakdown")
@@ -238,12 +174,9 @@ def analyze_stock_raw(ticker):
     c_gold = (trend_raw == "gold_cross")
     c_bull = (trend_raw == "bull")
     c_norm = (vol_raw == "v_norm")
-    
-    # 回踩判断超短拆分
-    dip_limit = support * 1.04
-    c_dip = (latest_close <= dip_limit)
+    c_dip = (latest_close <= support * 1.04)
 
-    # 极短执行树
+    # 决策树
     if c_dump and (c_dead or c_drop):
         strat_raw = "stop"
     elif c_out and c_surge and c_high:
@@ -285,5 +218,20 @@ def analyze_stock_raw(ticker):
 # 🖥️ 第二部分：前端数据渲染交互主控
 # ==========================================
 
-lang_choice = st.sidebar.radio(
-    "🌐 Language /
+# 🌐 彻底精简单选文案，斩断截断风险
+l_lbl = "Select Language / 语言"
+l_opts = ["Chinese", "English"]
+lang_choice = st.sidebar.radio(l_lbl, l_opts)
+
+if lang_choice == "English":
+    lang = "EN"
+else:
+    lang = "CN"
+
+if lang == "EN":
+    t_title = "⚡ BLOOMBERG QUANT APP"
+    t_cap = "Proprietary Desk Terminal Pro"
+    t_ctrl = "⚙️ Console"
+    t_pool = "监控池管理"
+    t_lbl = "Add Tickers:"
+    t_scan
