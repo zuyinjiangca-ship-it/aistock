@@ -279,7 +279,7 @@ lang = "EN" if lang_choice == "🇺🇸 English" else "CN"
 
 ui_meta = {
     "title": "⚡ BLOOMBERG QUANT APP",
-    "caption": "顶级自营台专供：常驻独立内存 | 0毫秒双语瞬切暗黑科技终端" if lang == "CN" else "Proprietary Desk: Persistent Memory | 0-ms Cyber Bloomberg Terminal Edition",
+    "caption": "顶级自营台专供：常驻独立内存 | 0毫秒双语瞬切暗黑科技终端" if lang == "CN" else "Proprietary Desk: Persistent Memory | 0-ms Multi-Asset Hot Swap Dashboard",
     "ctrl_panel": "⚙️ 控制中心" if lang == "CN" else "⚙️ Terminal Control",
     "manage_pool": "➕ 动态监控池管理" if lang == "CN" else "➕ Watchlist Assets",
     "input_label": "输入追加标的（逗号/空格隔开）:" if lang == "CN" else "Insert Custom Tickers:",
@@ -294,7 +294,6 @@ ui_meta = {
     "top5_title": "🔥 高得分绝对主力加仓标的 (TOP 5)" if lang == "CN" else "🔥 Alpha Seekers: Top 5 High-Score Momentum",
 }
 
-# 渲染高规格大气的 HTML 流光标题
 st.markdown(f'<div class="terminal-title">{ui_meta["title"]}</div>', unsafe_allow_html=True)
 st.markdown(f'<div class="terminal-caption">{ui_meta["caption"]}</div>', unsafe_allow_html=True)
 
@@ -351,13 +350,12 @@ if user_failed:
     st.sidebar.error(f"{ui_meta['err_fetch']} `{', '.join(user_failed)}`")
 
 # ==========================================
-# 🖥️ 第三部分：顶级大牌悬浮卡片与表格高亮渲染
+# 🖥️ 第三部分：数据卡片与多行防截断染色逻辑
 # ==========================================
 
 if st.session_state.raw_scan_results is not None and not st.session_state.raw_scan_results.empty:
     df_raw = st.session_state.raw_scan_results.copy()
 
-    # 渲染顶部悬浮卡片
     high_alpha_count = len(df_raw[df_raw['Score'] >= 75])
     risk_count = len(df_raw[df_raw['strat_raw'] == 'stop'])
     
@@ -381,7 +379,6 @@ if st.session_state.raw_scan_results is not None and not st.session_state.raw_sc
     """
     st.markdown(kpi_html, unsafe_allow_html=True)
 
-    # 动态翻译
     if lang == "EN":
         trans_trend = {"gold_cross": "🎯 Golden Cross", "dead_cross": "🚨 Death Cross", "bull": "📈 Bullish Trend", "bear": "📉 Bearish Momentum"}
         trans_level = {"breakout": "🚀 Breakout", "breakdown": "⚠️ Breakdown", "range": "Range Bound"}
@@ -448,15 +445,40 @@ if st.session_state.raw_scan_results is not None and not st.session_state.raw_sc
     final_render_df = display_df.rename(columns=rename_dict)
     target_strategy_col = rename_dict["Trading Strategy"]
 
-    # 使用纯正极客暗黑高亮渲染表格内部（暗黑色彩优化）
     st.markdown(f'<div class="section-title">{ui_meta["board_title"]}</div>', unsafe_allow_html=True)
     
+    # 🛡️ 绝杀防御：将原先的长行列表推导式完全分行拆解，100% 避开任何复制截断 Bug！
     def style_strategy(val):
         val_str = str(val)
-        if any(x in val_str for x in ["强力买入", "金叉", "黄金买点", "Strong Buy", "Golden Cross", "Golden Entry"]):
-            return """background-color: #1f3a22; color: #56d364; font-weight: bold; border: 1px solid #238636;"""
-        if any(x in val_str for x in ["低吸", "分批", "左侧", "Pullback Buy", "Left-Side Entry"]):
-            return """background-color: #1b2f1c; color: #7fe98a; font-weight: bold;"""
-        if any(x in val_str for x in ["假突破", "预警", "暂勿追", "Fake Out", "Avoid Chasing"]):
-            return """background-color: #382e13; color: #e3b341; font-weight: bold;"""
-        if any(x
+        
+        # 绿色高亮组
+        g_list = ["强力买入", "金叉", "黄金买点", "Strong Buy", "Golden Cross", "Golden Entry"]
+        if any(x in val_str for x in g_list):
+            return "background-color: #1f3a22; color: #56d364; font-weight: bold; border: 1px solid #238636;"
+            
+        # 浅绿低吸组
+        lg_list = ["低吸", "分批", "左侧", "Pullback Buy", "Left-Side Entry"]
+        if any(x in val_str for x in lg_list):
+            return "background-color: #1b2f1c; color: #7fe98a; font-weight: bold;"
+            
+        # 黄色预警组
+        y_list = ["假突破", "预警", "暂勿追", "Fake Out", "Avoid Chasing"]
+        if any(x in val_str for x in y_list):
+            return "background-color: #382e13; color: #e3b341; font-weight: bold;"
+            
+        # 红色清仓组
+        r_list = ["减仓", "止损", "Reduce", "Stop Loss"]
+        if any(x in val_str for x in r_list):
+            return "background-color: #3c1e1e; color: #ff7b72; font-weight: bold; border: 1px solid #f85149;"
+            
+        return ""
+    
+    styled_df = final_render_df.style.map(style_strategy, subset=[target_strategy_col])
+    
+    st.dataframe(styled_df, use_container_width=True, height=480)
+
+    st.markdown(f'<div class="section-title">{ui_meta["top5_title"]}</div>', unsafe_allow_html=True)
+    st.dataframe(final_render_df.head(5), use_container_width=True, height=210)
+
+st.sidebar.markdown("---")
+st.sidebar.info("🤖 SYSTEM RUNNING AT EXTRACTION ALPHA v3.6")
