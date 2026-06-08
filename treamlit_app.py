@@ -8,9 +8,13 @@ import yfinance as yf
 from tickers import TICKERS
 
 # 开启全宽布局
-st.set_page_config(layout="wide", page_title="AI Trading Pro", page_icon="🚀")
+st.set_page_config(
+    layout="wide", 
+    page_title="AI Trading Pro", 
+    page_icon="🚀"
+)
 
-# 🎨 视觉平衡：柔和舒适的浅色奶油白背景
+# 🎨 视觉皮肤：柔和舒适的浅色奶油白背景
 st.markdown("""
     <style>
     .main, .stApp {
@@ -34,7 +38,7 @@ st.markdown("""
         color: #333 !important;
     }
     .terminal-title {
-        font-family: 'Courier New', Courier, monospace;
+        font-family: 'Courier New', monospace;
         font-weight: 900 !important;
         background: linear-gradient(45deg, #0047AB, #56d364);
         -webkit-background-clip: text;
@@ -91,7 +95,6 @@ st.markdown("""
         padding: 0.4rem 2rem !important;
         font-size: 0.95rem !important;
         font-weight: bold !important;
-        transition: all 0.3s ease !important;
         width: 100% !important;
     }
     .stDataFrame {
@@ -108,15 +111,19 @@ st.markdown("""
 
 def get_secure_session():
     session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-    })
+    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    session.headers.update({'User-Agent': ua})
     return session
 
 def get_data(ticker, session, retries=3):
     for _ in range(retries):
         try:
-            df = yf.download(ticker, period="1y", progress=False, session=session)
+            df = yf.download(
+                ticker, 
+                period="1y", 
+                progress=False, 
+                session=session
+            )
             if not df.empty:
                 if isinstance(df.columns, pd.MultiIndex):
                     df.columns = df.columns.get_level_values(0)
@@ -191,7 +198,6 @@ def analyze_stock_raw(ticker):
     else:
         level_raw = "range"
 
-    # 🔥 极限抗噪改动：把公式彻底做短，一行绝不超过5个字符，全面免疫任何高频截断
     sf = 1.015
     suggested_buy_price = round(support * sf, 2)
 
@@ -221,18 +227,63 @@ def analyze_stock_raw(ticker):
     elif is_vol_dump: score -= 10
     score = max(10, min(95, score))
 
-    # 6. 策略决策
-    if is_vol_dump and (trend_raw == "dead_cross" or level_raw == "breakdown"):
+    # 🔥 核心重构：拆解成超短布林变量，100% 破解行尾换行截断魔咒
+    c_dump = is_vol_dump
+    c_dead = (trend_raw == "dead_cross")
+    c_drop = (level_raw == "breakdown")
+    c_out = (level_raw == "breakout")
+    c_surge = is_vol_surge
+    c_high = (score >= 80)
+    c_buy_p = (latest_close <= suggested_buy_price)
+    c_gold = (trend_raw == "gold_cross")
+    c_bull = (trend_raw == "bull")
+    c_norm = (vol_raw == "v_norm")
+    
+    # 回踩判断超短拆分
+    dip_limit = support * 1.04
+    c_dip = (latest_close <= dip_limit)
+
+    # 极短执行树
+    if c_dump and (c_dead or c_drop):
         strat_raw = "stop"
-    elif level_raw == "breakout" and is_vol_surge and score >= 80:
+    elif c_out and c_surge and c_high:
         strat_raw = "strong_buy"
-    elif level_raw == "breakout" and is_vol_dump:
+    elif c_out and c_dump:
         strat_raw = "fake"
-    elif latest_close <= suggested_buy_price and not is_vol_dump:
-        if trend_raw in ["gold_cross", "bull"]:
+    elif c_buy_p and (not c_dump):
+        if c_gold or c_bull:
             strat_raw = "golden"
         else:
             strat_raw = "scale_in"
-    elif trend_raw == "gold_cross" and not is_vol_dump:
+    elif c_gold and (not c_dump):
         strat_raw = "tentative"
-    elif trend_raw == "bull
+    elif c_bull and c_dip:
+        strat_raw = "pullback"
+    elif c_bull and c_norm:
+        strat_raw = "hold"
+    else:
+        strat_raw = "wait"
+
+    return {
+        "Ticker": ticker,
+        "Price": round(latest_close, 2),
+        "Suggested Buy Price": suggested_buy_price,
+        "Score": int(score),
+        "trend_raw": trend_raw,
+        "level_raw": level_raw,
+        "vol_raw": vol_raw,
+        "strat_raw": strat_raw,
+        "rsi_now": rsi_now,
+        "rsi_change": rsi_change,
+        "9 EMA": round(ema_9_now, 2),
+        "24 SMA": round(sma_24_now, 2),
+        "Support": round(support, 2),
+        "Resistance": round(resistance, 2)
+    }
+
+# ==========================================
+# 🖥️ 第二部分：前端数据渲染交互主控
+# ==========================================
+
+lang_choice = st.sidebar.radio(
+    "🌐 Language /
