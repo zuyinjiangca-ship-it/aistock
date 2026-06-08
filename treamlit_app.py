@@ -334,7 +334,6 @@ if st.session_state.raw_scan_results is not None and not st.session_state.raw_sc
 
     st.subheader(ui_meta['board_title'])
     
-    # 🔥 核心升级：改用三引号定义多行样式字符串，100% 免疫任何换行引起的报错！
     def style_strategy(val):
         val_str = str(val)
         if any(x in val_str for x in ["强力买入", "金叉", "黄金买点", "Strong Buy", "Golden Cross", "Golden Entry"]):
@@ -349,7 +348,11 @@ if st.session_state.raw_scan_results is not None and not st.session_state.raw_sc
     
     styled_df = final_render_df.style.map(style_strategy, subset=[target_strategy_col])
     
-    st.dataframe(styled_df, use_container_width=True, height=480)
+    # 🎯 改变高度至 760 像素，确保完美直显 20+ 行数据，消除多余滚动
+    st.dataframe(styled_df, use_container_width=True, height=760)
+
+    # 📥 强行注入纵向间距缓冲区，优雅地将 TOP 5 标的向下推移
+    st.markdown("<br><br>", unsafe_allow_html=True)
 
     st.subheader(ui_meta['top5_title'])
     st.dataframe(final_render_df.head(5), use_container_width=True, height=210)
