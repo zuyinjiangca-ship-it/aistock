@@ -37,13 +37,11 @@ def analyze_stock(ticker):
 
     close = df['Close'].astype(float)
     volume = df['Volume'].astype(float)
-    high_series = df['High'].astype(float)
-    low_series = df['Low'].astype(float)
 
     latest_close = float(close.iloc[-1])
     latest_vol = float(volume.iloc[-1])
 
-    # 1. 均线趋势判定 (Trend)
+    # 1. 均线趋势
     df['EMA_9'] = close.ewm(span=9, adjust=False).mean()
     df['SMA_24'] = close.rolling(window=24).mean()
     
@@ -61,15 +59,25 @@ def analyze_stock(ticker):
     else:
         trend_status = "📉 空头动能"
 
-    # 2. RSI (14)
+    # 2. 🔥 核心新增：RSI (14) 动态流向与建议算法
     delta = close.diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
     rs = gain / loss
     rsi = 100 - (100 / (1 + rs))
-    latest_rsi = float(rsi.iloc[-1])
+    rsi_now = float(rsi.iloc[-1])
+    rsi_prev = float(rsi.iloc[-2])
+    rsi_change = rsi_now - rsi_prev
+    
+    rsi_trend = "🔺走强" if rsi_change > 0 else "🔻走弱"
+    if rsi_now >= 70:
+        rsi_advice = f"{round(rsi_now, 1)} | 🔥超买(风控预警)"
+    elif rsi_now <= 30:
+        rsi_advice = f"{round(rsi_now, 1)} | 🛡️超卖(具备洼地价值)"
+    else:
+        rsi_advice = f"{round(rsi_now, 1)} | 🧭中性({rsi_trend})"
 
-    # 3. 布林带与斐波那契定位支撑阻力 (Levels)
+    # 3. 布林带与斐波那契
     df['BB_mid'] = close.rolling(window=20).mean()
     df['BB_std'] = close.rolling(window=20).std()
     df['BB_lower'] = df['BB_mid'] - (2 * df['BB_std'])
@@ -91,7 +99,11 @@ def analyze_stock(ticker):
     else:
         level_status = "区间震荡"
 
-    # 4. 量价精准追踪模块 (Volume)
+    # 4. 🔥 核心新增：量化机构建仓推荐价算法
+    # 逻辑：以最强技术防御地板（Support）作为基准，右侧交易允许在其上方 1.5% 范围内安全接筹
+    suggested_buy_price = round(support * 1.015, 2)
+
+    # 5. 量价追踪
     df['Vol_SMA20'] = volume.rolling(window=20).mean()
     avg_vol = float(df['Vol_SMA20'].iloc[-1])
     price_change = latest_close - float(close.iloc[-2])
@@ -103,7 +115,7 @@ def analyze_stock(ticker):
     else:
         vol_status = "正常"
 
-    # 5. 综合多空评分体系 (Score)
+    # 6. 综合评分
     score = 50
     if trend_status == "🎯 金叉启动": score += 25
     elif trend_status == "📈 多头趋势": score += 15
@@ -114,7 +126,7 @@ def analyze_stock(ticker):
     elif vol_status == "💥 放量下跌": score -= 10
     score = max(10, min(95, score))
 
-    # 6. 🚨 核心新增：自动化投行策略建议引擎 (Strategy Advice)
+    # 7. 自动化操盘决策
     if vol_status == "💥 放量下跌" and (trend_status == "🚨 死叉确立" or level_status == "⚠️ 跌破支撑"):
         strategy = "🚨 坚决减仓 / 右侧止损"
     elif level_status == "🚀 突破阻力" and vol_status == "🔥 放量上涨" and score >= 80:
@@ -128,21 +140,22 @@ def analyze_stock(ticker):
     elif trend_status == "📈 多头趋势" and vol_status == "正常":
         strategy = "👌 趋势良好 / 坚定持股"
     elif trend_status == "📉 空头动能" and level_status == "🚀 突破阻力":
-        strategy = " Foxes 超跌反弹 / 轻仓短线试探"
+        strategy = "🦊 超跌反弹 / 轻仓短线试探"
     else:
         strategy = "⏳ 震荡蓄势 / 观望为宜"
 
     return {
         "Ticker": ticker,
         "Price": round(latest_close, 2),
+        "Suggested Buy Price": suggested_buy_price,
         "Score": int(score),
+        "Trading Strategy": strategy,
+        "Trend": trend_status,
+        "Position Level": level_status,
+        "Volume Status": vol_status,
+        "RSI Status & Advice": rsi_advice,
         "9 EMA": round(ema_9_now, 2),
         "24 SMA": round(sma_24_now, 2),
         "Support": round(support, 2),
-        "Resistance": round(resistance, 2),
-        "RSI": round(latest_rsi, 1),
-        "Volume Status": vol_status,
-        "Trend": trend_status,
-        "Position Level": level_status,
-        "Trading Strategy": strategy
+        "Resistance": round(resistance, 2)
     }
