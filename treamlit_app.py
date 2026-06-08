@@ -7,31 +7,27 @@ import time
 import yfinance as yf
 from tickers import TICKERS
 
-# 强制开启全球量化大屏全宽布局
+# 开启全球量化大屏全宽布局
 st.set_page_config(layout="wide")
 
-# 🔥 核心空间榨汁：注入极限紧凑型 CSS，强行剥离页面多余留白与大间距
+# 🎨 视觉平衡：提供大气、舒适且不空旷的专业看盘外边距与组件间距
 st.markdown("""
     <style>
-    /* 极致压缩页面主容器四周的空白 */
+    /* 恢复大气舒适的页面边距，拒绝极端拥挤 */
     .block-container {
-        padding-top: 0.5rem !important;
-        padding-bottom: 0rem !important;
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
+        padding-top: 1.8rem !important;
+        padding-bottom: 1.5rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
     }
-    /* 压缩Streamlit组件之间的默认间距 */
+    /* 舒适的组件垂直间距，让眼睛有呼吸感 */
     [data-testid="stVerticalBlock"] {
-        gap: 0.3rem !important;
+        gap: 0.8rem !important;
     }
-    /* 让顶部的标题区域更加紧凑 */
+    /* 优化标题字体与间距 */
     h1 {
-        font-size: 1.8rem !important;
-        margin-bottom: 0rem !important;
-        padding-bottom: 0rem !important;
-    }
-    p {
-        margin-bottom: 0.2rem !important;
+        font-size: 2.2rem !important;
+        margin-bottom: 0.1rem !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -188,7 +184,7 @@ def analyze_stock(ticker, lang):
     elif is_vol_dump: score -= 10
     score = max(10, min(95, score))
 
-    # 策略执行
+    # 策略决策
     if is_vol_dump and (trend_status_raw == "dead_cross" or level_status_raw == "breakdown"):
         strategy = s_stop
     elif level_status_raw == "breakout" and is_vol_surge and score >= 80:
@@ -234,7 +230,7 @@ lang = "EN" if lang_choice == "🇺🇸 English" else "CN"
 
 ui_meta = {
     "title": "🚀 AI Trading System Pro",
-    "caption": "顶级投行专供：一屏锁死高紧凑自适应版" if lang == "CN" else "Institutional Grade: Compact Screen Lock Edition",
+    "caption": "顶级投行专供：动态自适应大盘终端" if lang == "CN" else "Institutional Grade: Responsive Multi-Asset Terminal",
     "ctrl_panel": "⚙️ 控制台" if lang == "CN" else "⚙️ Console",
     "manage_pool": "➕ 管理监控池" if lang == "CN" else "➕ Watchlist",
     "input_label": "输入追加标的（逗号/空格隔开）:" if lang == "CN" else "Add Tickers (use comma/space):",
@@ -245,7 +241,7 @@ ui_meta = {
     "btn_scan": "开始扫描" if lang == "CN" else "Radar Scan",
     "spinner_text": "量化矩阵解算中..." if lang == "CN" else "Processing Matrix...",
     "data_feed_err": "⚠️ 数据源受限。" if lang == "CN" else "⚠️ Data Restricted.",
-    "board_title": "📊 实时策略决策看板 (内含布林与斐波那契)" if lang == "CN" else "📊 Quantitative Decision Dashboard",
+    "board_title": "📊 实时策略决策看板" if lang == "CN" else "📊 Quantitative Decision Dashboard",
     "top5_title": "🔥 强动能加仓标的 (TOP 5)" if lang == "CN" else "🔥 Top 5 High-Score Momentum Assets",
 }
 
@@ -259,7 +255,7 @@ st.sidebar.markdown("---")
 st.sidebar.header(ui_meta["ctrl_panel"])
 st.sidebar.subheader(ui_meta["manage_pool"])
 
-user_input = st.sidebar.text_area(ui_meta["input_label"], value=default_text, help=ui_meta["input_help"], height=100)
+user_input = st.sidebar.text_area(ui_meta["input_label"], value=default_text, help=ui_meta["input_help"], height=120)
 
 if user_input != default_text:
     if user_input.strip():
@@ -328,8 +324,8 @@ if st.button(ui_meta["btn_scan"], type="primary"):
             display_df = df.rename(columns=rename_dict)
             target_strategy_col = rename_dict["Trading Strategy"]
 
-            # 使用 Markdown 小三级标题代替 st.subheader，腾出大量纵向像素
-            st.markdown(f"##### {ui_meta['board_title']}")
+            # 回归大气、标准的子标题组件
+            st.subheader(ui_meta['board_title'])
             
             def style_strategy(val):
                 val_str = str(val)
@@ -345,27 +341,4 @@ if st.button(ui_meta["btn_scan"], type="primary"):
             
             styled_df = display_df.style.map(style_strategy, subset=[target_strategy_col])
             
-            # 🔥 核心锁死：强行配置列宽（小尺寸列锁死），并将主表格高度限制在 380，杜绝全网页拖拽
-            col_config = {
-                rename_dict["Ticker"]: st.column_config.TextColumn(width="small"),
-                rename_dict["Price"]: st.column_config.NumberColumn(width="small"),
-                rename_dict["Suggested Buy Price"]: st.column_config.NumberColumn(width="small"),
-                rename_dict["Score"]: st.column_config.NumberColumn(width="small"),
-                rename_dict["Trading Strategy"]: st.column_config.TextColumn(width="medium"),
-                rename_dict["Trend"]: st.column_config.TextColumn(width="small"),
-                rename_dict["Position Level"]: st.column_config.TextColumn(width="small"),
-                rename_dict["Volume Status"]: st.column_config.TextColumn(width="small"),
-                rename_dict["RSI Status & Advice"]: st.column_config.TextColumn(width="medium"),
-                "9 EMA": st.column_config.NumberColumn(width="small"),
-                "24 SMA": st.column_config.NumberColumn(width="small"),
-                rename_dict["Support"]: st.column_config.NumberColumn(width="small"),
-                rename_dict["Resistance"]: st.column_config.NumberColumn(width="small"),
-            }
-            
-            st.dataframe(styled_df, width='stretch', height=380, column_config=col_config)
-
-            st.markdown(f"##### {ui_meta['top5_title']}")
-            st.dataframe(display_df.head(5), width='stretch', height=160, column_config=col_config)
-
-st.sidebar.markdown("---")
-st.sidebar.info(ui_meta["title"] + " v2.0")
+            # 🔥
