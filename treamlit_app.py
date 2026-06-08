@@ -7,18 +7,16 @@ import time
 import yfinance as yf
 from tickers import TICKERS
 
-# 强制开启全球量化大屏布局
 st.set_page_config(layout="wide")
 
 st.title("🚀 AI Trading System Pro")
-st.caption("顶级投行专供：单文件无缝合体终端 | RSI动态增减量化与推荐买点系统")
+st.caption("顶级投行专供：动态书签记忆终端 | 推荐买点决策矩阵智能化系统")
 
 # ==========================================
-# 🛠️ 第一部分：核心量化计算引擎 (原 analyzer.py 完美并入)
+# 🛠️ 第一部分：核心量化计算引擎
 # ==========================================
 
 def get_secure_session():
-    """建立虚拟网络通道，最大限度规避线上公有云 IP 被频控拦截的风险"""
     session = requests.Session()
     session.headers.update({
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -28,10 +26,8 @@ def get_secure_session():
 def get_data(ticker, session, retries=3):
     for _ in range(retries):
         try:
-            # 锁定 1y 周期参数，规避 6m 参数在线上导致的死锁空数据
             df = yf.download(ticker, period="1y", progress=False, session=session)
             if not df.empty:
-                # 核心防错：拍扁最新版 yfinance 返回的双层异形表头
                 if isinstance(df.columns, pd.MultiIndex):
                     df.columns = df.columns.get_level_values(0)
                 return df
@@ -74,7 +70,7 @@ def analyze_stock(ticker):
     else:
         trend_status = "📉 空头动能"
 
-    # 2. 🔥 RSI (14) 高频变化量化分析
+    # 2. RSI (14) 动态分析
     delta = close.diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
@@ -84,7 +80,6 @@ def analyze_stock(ticker):
     rsi_prev = float(rsi.iloc[-2])
     rsi_change = rsi_now - rsi_prev
     
-    # 指出动能今日增减的精细幅度
     rsi_trend = f"🔺+{round(rsi_change, 1)}" if rsi_change > 0 else f"🔻{round(rsi_change, 1)}"
     if rsi_now >= 70:
         rsi_advice = f"{round(rsi_now, 1)} | 🔥超买预警"
@@ -115,7 +110,7 @@ def analyze_stock(ticker):
     else:
         level_status = "区间震荡"
 
-    # 4. 🔥 核心机构安全垫推荐买入价算法
+    # 4. 🔥 机构安全垫推荐买入价（核心锚点）
     suggested_buy_price = round(support * 1.015, 2)
 
     # 5. 量价追踪
@@ -141,21 +136,25 @@ def analyze_stock(ticker):
     elif vol_status == "💥 放量下跌": score -= 10
     score = max(10, min(95, score))
 
-    # 7. 自动化策略生成
+    # 7. 🔥 核心重构：自动化策略决策矩阵（买入价绝对优先判定，解决模糊）
     if vol_status == "💥 放量下跌" and (trend_status == "🚨 死叉确立" or level_status == "⚠️ 跌破支撑"):
         strategy = "🚨 坚决减仓 / 右侧止损"
     elif level_status == "🚀 突破阻力" and vol_status == "🔥 放量上涨" and score >= 80:
         strategy = "🦅 强力买入 / 主升浪加仓"
     elif level_status == "🚀 突破阻力" and vol_status == "💥 放量下跌":
         strategy = "👀 假突破预警 / 暂勿追高"
+    # ✨ 新增核心卡位：只要价格跌进或低于推荐买入价，且没有恶性放量砸盘
+    elif latest_close <= suggested_buy_price and vol_status != "💥 放量下跌":
+        if trend_status in ["🎯 金叉启动", "📈 多头趋势"]:
+            strategy = "👑 黄金买点 / 强力左侧布局"
+        else:
+            strategy = "📥 左侧潜伏区 / 步兵分批试探"
     elif trend_status == "🎯 金叉启动" and vol_status != "💥 放量下跌":
         strategy = "🏹 试探性建仓 / 开多"
     elif trend_status == "📈 多头趋势" and latest_close <= support * 1.04:
         strategy = "📥 缩量回踩 / 逢低分批买入"
     elif trend_status == "📈 多头趋势" and vol_status == "正常":
         strategy = "👌 趋势良好 / 坚定持股"
-    elif trend_status == "📉 空头动能" and level_status == "🚀 突破阻力":
-        strategy = "🦊 超跌反弹 / 轻仓短线试探"
     else:
         strategy = "⏳ 震荡蓄势 / 观望为宜"
 
@@ -179,7 +178,6 @@ def analyze_stock(ticker):
 # 🖥️ 第二部分：前端数据渲染交互主控
 # ==========================================
 
-# 动态 URL 记忆书签系统
 url_params = st.query_params.get_all("tickers")
 default_text = url_params[0] if url_params else ""
 
@@ -205,7 +203,6 @@ if user_input:
 combined_tickers = list(dict.fromkeys(TICKERS + custom_tickers))
 st.sidebar.write(f"📊 当前雷达监控总数：`{len(combined_tickers)}` 只核心资产")
 
-# 安全防护深度缓存盾（将标的池直接作为变量，名单一变，缓存秒解禁）
 @st.cache_data(ttl=600)
 def run_scan_with_feedback(tickers_list):
     results = []
@@ -232,28 +229,26 @@ if st.button("开始扫描", type="primary"):
         if df.empty:
             st.warning("⚠️ 数据源暂时受限，请稍后再试。")
         else:
-            # 依评分排序
             df = df.sort_values(by="Score", ascending=False).reset_index(drop=True)
 
-            # 顶级优先级重新排盘
             columns_order = [
                 "Ticker", "Price", "Suggested Buy Price", "Score", "Trading Strategy", 
                 "Trend", "Position Level", "Volume Status", "RSI Status & Advice",
                 "9 EMA", "24 SMA", "Support", "Resistance"
             ]
             
-            # 防闪退动态卡位
             existing_columns = [col for col in columns_order if col in df.columns]
             df = df[existing_columns]
 
             st.subheader("📊 实时多维策略决策看板")
             
+            # 升级色彩学高亮渲染
             def style_strategy(val):
-                if "强力买入" in str(val) or "金叉" in str(val):
+                if "强力买入" in str(val) or "金叉" in str(val) or "👑 黄金买点" in str(val):
                     return 'background-color: #e6f4ea; color: #137333; font-weight: bold;'
-                if "逢低分批" in str(val):
+                if "逢低分批" in str(val) or "📥 左侧潜伏" in str(val):
                     return 'background-color: #f1f8e9; color: #558b2f; font-weight: bold;'
-                if "假突破" in str(val) or "预警" in str(val):
+                if "假突破" in str(val) or "预警" in str(val) or "暂勿追高" in str(val):
                     return 'background-color: #fffde7; color: #f57f17; font-weight: bold;'
                 if "减仓" in str(val) or "止损" in str(val):
                     return 'background-color: #fce8e6; color: #c5221f; font-weight: bold;'
