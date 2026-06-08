@@ -7,31 +7,25 @@ import time
 import yfinance as yf
 from tickers import TICKERS
 
-# 开启全球量化大屏全宽布局
+# 开启全宽布局
 st.set_page_config(layout="wide", page_title="AI Trading Pro", page_icon="🚀")
 
-# 🎨 投行专属：硬核注入“大气平衡、柔和背景”高级 CSS 样式表
+# 🎨 视觉平衡：柔和舒适的浅色奶油白背景
 st.markdown("""
     <style>
-    /* 1. 恢复大气舒适的奶油白柔和全屏背景 */
     .main, .stApp {
         background-color: #fcfaf0 !important;
         color: #333 !important;
     }
-    
-    /* 极致压缩页面主容器四周的空白 */
     .block-container {
         padding-top: 0.5rem !important;
         padding-bottom: 0rem !important;
         padding-left: 1rem !important;
         padding-right: 1rem !important;
     }
-    /* 压缩Streamlit组件之间的默认间距 */
     [data-testid="stVerticalBlock"] {
         gap: 0.3rem !important;
     }
-    
-    /* 2. 纯白侧边栏彭博分流舱样式 */
     [data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #d1d1d1 !important;
@@ -39,8 +33,6 @@ st.markdown("""
     [data-testid="stSidebar"] p {
         color: #333 !important;
     }
-    
-    /* 3. 极致空间榨汁：压缩顶部标题区域，强行下移标题 */
     .terminal-title {
         font-family: 'Courier New', Courier, monospace;
         font-weight: 900 !important;
@@ -58,8 +50,6 @@ st.markdown("""
         padding-left: 8px;
         margin-bottom: 0.5rem !important;
     }
-    
-    /* 4. 压缩表格小标题 */
     .section-title {
         color: #0047AB !important;
         font-weight: bold !important;
@@ -69,8 +59,6 @@ st.markdown("""
         margin-bottom: 0.2rem !important;
         font-size: 1rem !important;
     }
-
-    /* 5. 磨砂玻璃科技数据卡片 (KPI Blocks) */
     .kpi-container {
         display: flex;
         gap: 0.5rem;
@@ -88,7 +76,6 @@ st.markdown("""
         font-size: 0.7rem;
         color: #666;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
     .kpi-value {
         font-size: 1.4rem;
@@ -96,8 +83,6 @@ st.markdown("""
         color: #0047AB;
         margin-top: 0.1rem;
     }
-
-    /* 6. 极客微光律动扫描按钮 */
     div.stButton > button:first-child {
         background: linear-gradient(135deg, #6A1B9A 0%, #238636 100%) !important;
         color: #ffffff !important;
@@ -106,18 +91,9 @@ st.markdown("""
         padding: 0.4rem 2rem !important;
         font-size: 0.95rem !important;
         font-weight: bold !important;
-        letter-spacing: 0.5px !important;
-        box-shadow: 0 2px 8px rgba(35, 134, 54, 0.2) !important;
         transition: all 0.3s ease !important;
         width: 100% !important;
     }
-    div.stButton > button:first-child:hover {
-        transform: translateY(-1px) !important;
-        box-shadow: 0 4px 12px rgba(88, 166, 255, 0.4) !important;
-        background: linear-gradient(135deg, #7B1FA2 0%, #56d364 100%) !important;
-    }
-    
-    /* 7. 让Streamlit表格自然横向平摊，杜绝左右滚动 */
     .stDataFrame {
         background-color: #ffffff !important;
         border: 1px solid #d1d1d1 !important;
@@ -127,13 +103,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🛠️ 第一部分：核心纯量化数据引擎 (计算与语言完全解耦)
+# 🛠️ 第一部分：核心纯量化数据引擎
 # ==========================================
 
 def get_secure_session():
     session = requests.Session()
     session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     })
     return session
 
@@ -193,7 +169,7 @@ def analyze_stock_raw(ticker):
     rsi_prev = float(rsi.iloc[-2])
     rsi_change = rsi_now - rsi_prev
 
-    # 3. 布林带与斐波那契融合支撑阻力
+    # 3. 布林带与斐波那契
     df['BB_mid'] = close.rolling(window=20).mean()
     df['BB_std'] = close.rolling(window=20).std()
     df['BB_lower'] = df['BB_mid'] - (2 * df['BB_std'])
@@ -215,5 +191,48 @@ def analyze_stock_raw(ticker):
     else:
         level_raw = "range"
 
-    # 🔥 核心修正：多行安全防御结构，彻底碎裂任何公式截断Bug
-    safe_factor =
+    # 🔥 极限抗噪改动：把公式彻底做短，一行绝不超过5个字符，全面免疫任何高频截断
+    sf = 1.015
+    suggested_buy_price = round(support * sf, 2)
+
+    # 4. 量价状态
+    df['Vol_SMA20'] = volume.rolling(window=20).mean()
+    avg_vol = float(df['Vol_SMA20'].iloc[-1])
+    price_change = latest_close - float(close.iloc[-2])
+
+    is_vol_dump = (latest_vol > avg_vol * 1.5 and price_change <= 0)
+    is_vol_surge = (latest_vol > avg_vol * 1.5 and price_change > 0)
+
+    if latest_vol > avg_vol * 1.5:
+        vol_raw = "v_up" if price_change > 0 else "v_down"
+    elif latest_vol < avg_vol * 0.7:
+        vol_raw = "v_low"
+    else:
+        vol_raw = "v_norm"
+
+    # 5. 评分
+    score = 50
+    if trend_raw == "gold_cross": score += 25
+    elif trend_raw == "bull": score += 15
+    elif trend_raw == "dead_cross": score -= 25
+    elif trend_raw == "bear": score -= 15
+    if level_raw == "breakout": score += 15
+    if is_vol_surge: score += 10
+    elif is_vol_dump: score -= 10
+    score = max(10, min(95, score))
+
+    # 6. 策略决策
+    if is_vol_dump and (trend_raw == "dead_cross" or level_raw == "breakdown"):
+        strat_raw = "stop"
+    elif level_raw == "breakout" and is_vol_surge and score >= 80:
+        strat_raw = "strong_buy"
+    elif level_raw == "breakout" and is_vol_dump:
+        strat_raw = "fake"
+    elif latest_close <= suggested_buy_price and not is_vol_dump:
+        if trend_raw in ["gold_cross", "bull"]:
+            strat_raw = "golden"
+        else:
+            strat_raw = "scale_in"
+    elif trend_raw == "gold_cross" and not is_vol_dump:
+        strat_raw = "tentative"
+    elif trend_raw == "bull
