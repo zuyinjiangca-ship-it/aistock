@@ -40,7 +40,7 @@ st.markdown("""
         color: #333 !important;
     }
     
-    /* 3. 🔥 极致空间榨汁：压缩顶部标题区域，强行下移标题 */
+    /* 3. 极致空间榨汁：压缩顶部标题区域，强行下移标题 */
     .terminal-title {
         font-family: 'Courier New', Courier, monospace;
         font-weight: 900 !important;
@@ -150,7 +150,6 @@ def get_data(ticker, session, retries=3):
     return None
 
 def analyze_stock_raw(ticker):
-    """只负责纯粹的数学指标测算，返回标准化多空信号元数据，不掺杂任何翻译语言，极大加快缓存速度"""
     session = get_secure_session()
     df = get_data(ticker, session)
 
@@ -216,5 +215,5 @@ def analyze_stock_raw(ticker):
     else:
         level_raw = "range"
 
-    # 🔥 机构防御推荐买入价
-    suggested_buy_price = round(support *
+    # 🔥 核心修正：多行安全防御结构，彻底碎裂任何公式截断Bug
+    safe_factor =
