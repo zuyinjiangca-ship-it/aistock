@@ -1,14 +1,185 @@
 # treamlit_app.py
 import streamlit as st
 import pandas as pd
-from analyzer import analyze_stock
+import numpy as np
+import requests
+import time
+import yfinance as yf
 from tickers import TICKERS
 
+# 强制开启全球量化大屏布局
 st.set_page_config(layout="wide")
 
 st.title("🚀 AI Trading System Pro")
-st.caption("顶级投行专供：动态书签记忆终端 | RSI动能追踪与推荐买点全自动化系统")
+st.caption("顶级投行专供：单文件无缝合体终端 | RSI动态增减量化与推荐买点系统")
 
+# ==========================================
+# 🛠️ 第一部分：核心量化计算引擎 (原 analyzer.py 完美并入)
+# ==========================================
+
+def get_secure_session():
+    """建立虚拟网络通道，最大限度规避线上公有云 IP 被频控拦截的风险"""
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    })
+    return session
+
+def get_data(ticker, session, retries=3):
+    for _ in range(retries):
+        try:
+            # 锁定 1y 周期参数，规避 6m 参数在线上导致的死锁空数据
+            df = yf.download(ticker, period="1y", progress=False, session=session)
+            if not df.empty:
+                # 核心防错：拍扁最新版 yfinance 返回的双层异形表头
+                if isinstance(df.columns, pd.MultiIndex):
+                    df.columns = df.columns.get_level_values(0)
+                return df
+        except:
+            time.sleep(0.5)
+    return None
+
+def analyze_stock(ticker):
+    session = get_secure_session()
+    df = get_data(ticker, session)
+
+    if df is None or df.empty:
+        return None
+
+    df = df.dropna(subset=['Close'])
+    if len(df) < 60:
+        return None
+
+    close = df['Close'].astype(float)
+    volume = df['Volume'].astype(float)
+
+    latest_close = float(close.iloc[-1])
+    latest_vol = float(volume.iloc[-1])
+
+    # 1. 均线趋势交叉 (Trend)
+    df['EMA_9'] = close.ewm(span=9, adjust=False).mean()
+    df['SMA_24'] = close.rolling(window=24).mean()
+    
+    ema_9_now = float(df['EMA_9'].iloc[-1])
+    sma_24_now = float(df['SMA_24'].iloc[-1])
+    ema_9_prev = float(df['EMA_9'].iloc[-2])
+    sma_24_prev = float(df['SMA_24'].iloc[-2])
+
+    if ema_9_prev < sma_24_prev and ema_9_now >= sma_24_now:
+        trend_status = "🎯 金叉启动"
+    elif ema_9_prev > sma_24_prev and ema_9_now <= sma_24_now:
+        trend_status = "🚨 死叉确立"
+    elif ema_9_now > sma_24_now:
+        trend_status = "📈 多头趋势"
+    else:
+        trend_status = "📉 空头动能"
+
+    # 2. 🔥 RSI (14) 高频变化量化分析
+    delta = close.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    rsi = 100 - (100 / (1 + rs))
+    rsi_now = float(rsi.iloc[-1])
+    rsi_prev = float(rsi.iloc[-2])
+    rsi_change = rsi_now - rsi_prev
+    
+    # 指出动能今日增减的精细幅度
+    rsi_trend = f"🔺+{round(rsi_change, 1)}" if rsi_change > 0 else f"🔻{round(rsi_change, 1)}"
+    if rsi_now >= 70:
+        rsi_advice = f"{round(rsi_now, 1)} | 🔥超买预警"
+    elif rsi_now <= 30:
+        rsi_advice = f"{round(rsi_now, 1)} | 🛡️超卖洼地"
+    else:
+        rsi_advice = f"{round(rsi_now, 1)} | 🧭中性({rsi_trend})"
+
+    # 3. 布林带与斐波那契融合算法
+    df['BB_mid'] = close.rolling(window=20).mean()
+    df['BB_std'] = close.rolling(window=20).std()
+    df['BB_lower'] = df['BB_mid'] - (2 * df['BB_std'])
+    
+    recent_df = df.tail(60)
+    high_p = float(recent_df['High'].max())
+    low_p = float(recent_df['Low'].min())
+    diff = high_p - low_p
+    fib_382 = high_p - 0.382 * diff
+    fib_618 = high_p - 0.618 * diff
+
+    support = max(float(df['BB_lower'].iloc[-1]), fib_618)
+    resistance = fib_382
+
+    if latest_close > resistance:
+        level_status = "🚀 突破阻力"
+    elif latest_close < support:
+        level_status = "⚠️ 跌破支撑"
+    else:
+        level_status = "区间震荡"
+
+    # 4. 🔥 核心机构安全垫推荐买入价算法
+    suggested_buy_price = round(support * 1.015, 2)
+
+    # 5. 量价追踪
+    df['Vol_SMA20'] = volume.rolling(window=20).mean()
+    avg_vol = float(df['Vol_SMA20'].iloc[-1])
+    price_change = latest_close - float(close.iloc[-2])
+
+    if latest_vol > avg_vol * 1.5:
+        vol_status = "🔥 放量上涨" if price_change > 0 else "💥 放量下跌"
+    elif latest_vol < avg_vol * 0.7:
+        vol_status = "💤 缩量"
+    else:
+        vol_status = "正常"
+
+    # 6. 综合评分矩阵
+    score = 50
+    if trend_status == "🎯 金叉启动": score += 25
+    elif trend_status == "📈 多头趋势": score += 15
+    elif trend_status == "🚨 死叉确立": score -= 25
+    elif trend_status == "📉 空头动能": score -= 15
+    if level_status == "🚀 突破阻力": score += 15
+    if vol_status == "🔥 放量上涨": score += 10
+    elif vol_status == "💥 放量下跌": score -= 10
+    score = max(10, min(95, score))
+
+    # 7. 自动化策略生成
+    if vol_status == "💥 放量下跌" and (trend_status == "🚨 死叉确立" or level_status == "⚠️ 跌破支撑"):
+        strategy = "🚨 坚决减仓 / 右侧止损"
+    elif level_status == "🚀 突破阻力" and vol_status == "🔥 放量上涨" and score >= 80:
+        strategy = "🦅 强力买入 / 主升浪加仓"
+    elif level_status == "🚀 突破阻力" and vol_status == "💥 放量下跌":
+        strategy = "👀 假突破预警 / 暂勿追高"
+    elif trend_status == "🎯 金叉启动" and vol_status != "💥 放量下跌":
+        strategy = "🏹 试探性建仓 / 开多"
+    elif trend_status == "📈 多头趋势" and latest_close <= support * 1.04:
+        strategy = "📥 缩量回踩 / 逢低分批买入"
+    elif trend_status == "📈 多头趋势" and vol_status == "正常":
+        strategy = "👌 趋势良好 / 坚定持股"
+    elif trend_status == "📉 空头动能" and level_status == "🚀 突破阻力":
+        strategy = "🦊 超跌反弹 / 轻仓短线试探"
+    else:
+        strategy = "⏳ 震荡蓄势 / 观望为宜"
+
+    return {
+        "Ticker": ticker,
+        "Price": round(latest_close, 2),
+        "Suggested Buy Price": suggested_buy_price,
+        "Score": int(score),
+        "Trading Strategy": strategy,
+        "Trend": trend_status,
+        "Position Level": level_status,
+        "Volume Status": vol_status,
+        "RSI Status & Advice": rsi_advice,
+        "9 EMA": round(ema_9_now, 2),
+        "24 SMA": round(sma_24_now, 2),
+        "Support": round(support, 2),
+        "Resistance": round(resistance, 2)
+    }
+
+# ==========================================
+# 🖥️ 第二部分：前端数据渲染交互主控
+# ==========================================
+
+# 动态 URL 记忆书签系统
 url_params = st.query_params.get_all("tickers")
 default_text = url_params[0] if url_params else ""
 
@@ -34,6 +205,7 @@ if user_input:
 combined_tickers = list(dict.fromkeys(TICKERS + custom_tickers))
 st.sidebar.write(f"📊 当前雷达监控总数：`{len(combined_tickers)}` 只核心资产")
 
+# 安全防护深度缓存盾（将标的池直接作为变量，名单一变，缓存秒解禁）
 @st.cache_data(ttl=600)
 def run_scan_with_feedback(tickers_list):
     results = []
@@ -55,22 +227,22 @@ if st.button("开始扫描", type="primary"):
 
         user_failed = [f for f in failed_tickers if f in custom_tickers]
         if user_failed:
-            st.sidebar.error(
-                f"⚠️ 以下资产未成功拉取行情:\n`{', '.join(user_failed)}`"
-            )
+            st.sidebar.error(f"⚠️ 以下资产未成功拉取行情:\n`{', '.join(user_failed)}`")
 
         if df.empty:
             st.warning("⚠️ 数据源暂时受限，请稍后再试。")
         else:
+            # 依评分排序
             df = df.sort_values(by="Score", ascending=False).reset_index(drop=True)
 
-            # 🔥 核心修正：优化列排布顺序，让高价值信息（推荐买价、RSI动态）一眼可见
+            # 顶级优先级重新排盘
             columns_order = [
-                "Ticker", "Price", "Suggested Buy Price", "Trading Strategy", 
+                "Ticker", "Price", "Suggested Buy Price", "Score", "Trading Strategy", 
                 "Trend", "Position Level", "Volume Status", "RSI Status & Advice",
                 "9 EMA", "24 SMA", "Support", "Resistance"
             ]
             
+            # 防闪退动态卡位
             existing_columns = [col for col in columns_order if col in df.columns]
             df = df[existing_columns]
 
