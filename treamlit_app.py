@@ -8,29 +8,115 @@ import yfinance as yf
 from tickers import TICKERS
 
 # 开启全球量化大屏全宽布局
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_title="AI Trading Pro", page_icon="🚀")
 
-# 🎨 视觉平衡样式表
+# 🎨 投行专属：硬核注入华尔街自营台“暗黑彭博科技终端”高级 CSS 样式表
 st.markdown("""
     <style>
+    /* 1. 全局底色全包与无缝边距配置 */
+    .main, .stApp {
+        background-color: #0d1117 !important;
+        color: #c9d1d9 !important;
+    }
     .block-container {
-        padding-top: 1.8rem !important;
-        padding-bottom: 1.5rem !important;
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
         padding-left: 2rem !important;
         padding-right: 2rem !important;
     }
-    [data-testid="stVerticalBlock"] {
-        gap: 0.8rem !important;
+    
+    /* 2. 侧边栏彭博分流舱样式 */
+    [data-testid="stSidebar"] {
+        background-color: #161b22 !important;
+        border-right: 1px solid #30363d !important;
     }
-    h1 {
-        font-size: 2.2rem !important;
-        margin-bottom: 0.1rem !important;
+    
+    /* 3. 投行级高级渐变流光文字标题 */
+    .terminal-title {
+        font-family: 'Courier New', Courier, monospace;
+        font-weight: 900 !important;
+        background: linear-gradient(45deg, #58a6ff, #56d364);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 2.6rem !important;
+        margin-bottom: 0rem !important;
+    }
+    .terminal-caption {
+        color: #8b949e !important;
+        font-size: 0.95rem !important;
+        border-left: 3px solid #58a6ff;
+        padding-left: 8px;
+        margin-bottom: 1.2rem !important;
+    }
+    
+    /* 4. 霓虹科技感小标题 */
+    .section-title {
+        color: #58a6ff !important;
+        font-weight: bold !important;
+        border-bottom: 1px solid #21262d;
+        padding-bottom: 4px;
+        margin-top: 0.5rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* 5. 磨砂玻璃科技数据卡片 (KPI Blocks) */
+    .kpi-container {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .kpi-card {
+        flex: 1;
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 8px;
+        padding: 0.7rem 1.2rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    .kpi-label {
+        font-size: 0.8rem;
+        color: #8b949e;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .kpi-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #58a6ff;
+        margin-top: 0.2rem;
+    }
+
+    /* 6. 极客微光律动扫描按钮 */
+    div.stButton > button:first-child {
+        background: linear-gradient(135deg, #1f6feb 0%, #238636 100%) !important;
+        color: #ffffff !important;
+        border: none !important;
+        border-radius: 6px !important;
+        padding: 0.6rem 2.5rem !important;
+        font-size: 1.1rem !important;
+        font-weight: bold !important;
+        letter-spacing: 1px !important;
+        box-shadow: 0 4px 15px rgba(35, 134, 54, 0.3) !important;
+        transition: all 0.3s ease !important;
+        width: 100% !important;
+    }
+    div.stButton > button:first-child:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(88, 166, 255, 0.5) !important;
+        background: linear-gradient(135deg, #58a6ff 0%, #56d364 100%) !important;
+    }
+    
+    /* 7. 强制优化 Streamlit 原生表格的暗黑契合度 */
+    .stDataFrame {
+        background-color: #161b22 !important;
+        border: 1px solid #30363d !important;
+        border-radius: 8px !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🛠️ 第一部分：核心纯量化数据引擎 (计算与语言完全解耦)
+# 🛠️ 第一部分：核心纯量化数据引擎
 # ==========================================
 
 def get_secure_session():
@@ -192,24 +278,25 @@ lang_choice = st.sidebar.radio("🌐 Language / 语言切换", ["🇨🇳 中文
 lang = "EN" if lang_choice == "🇺🇸 English" else "CN"
 
 ui_meta = {
-    "title": "🚀 AI Trading System Pro",
-    "caption": "顶级投行专供：常驻保险箱架构 | 0毫秒双语瞬切决策终端" if lang == "CN" else "Institutional Grade: Persistent Memory Terminal | 0-ms Multi-Asset Hot Swap Dashboard",
-    "ctrl_panel": "⚙️ 控制台" if lang == "CN" else "⚙️ Console",
-    "manage_pool": "➕ 管理监控池" if lang == "CN" else "➕ Watchlist",
-    "input_label": "输入追加标的（逗号/空格隔开）:" if lang == "CN" else "Add Tickers (use comma/space):",
+    "title": "⚡ BLOOMBERG QUANT APP",
+    "caption": "顶级自营台专供：常驻独立内存 | 0毫秒双语瞬切暗黑科技终端" if lang == "CN" else "Proprietary Desk: Persistent Memory | 0-ms Cyber Bloomberg Terminal Edition",
+    "ctrl_panel": "⚙️ 控制中心" if lang == "CN" else "⚙️ Terminal Control",
+    "manage_pool": "➕ 动态监控池管理" if lang == "CN" else "➕ Watchlist Assets",
+    "input_label": "输入追加标的（逗号/空格隔开）:" if lang == "CN" else "Insert Custom Tickers:",
     "input_help": "美股直输(如SOXX); 加股加后缀(如VFV.TO)" if lang == "CN" else "e.g., SOXX, VFV.TO",
-    "stat_text": "📊 监控数：" if lang == "CN" else "📊 Total: ",
+    "stat_text": "📊 监控数：" if lang == "CN" else "📊 Total Assets: ",
     "stat_unit": " 只" if lang == "CN" else " symbols",
     "err_fetch": "⚠️ 失败标的:" if lang == "CN" else "⚠️ Failed:",
-    "btn_scan": "开始扫描" if lang == "CN" else "Radar Scan",
-    "spinner_text": "量化矩阵解算中..." if lang == "CN" else "Processing Matrix...",
+    "btn_scan": "⚡ 激活雷达全量扫描" if lang == "CN" else "⚡ INITIALIZE RADAR SCAN",
+    "spinner_text": "彭博决策核心计算中..." if lang == "CN" else "Decompressing Matrix...",
     "data_feed_err": "⚠️ 数据源受限。" if lang == "CN" else "⚠️ Data Restricted.",
-    "board_title": "📊 实时策略决策看板" if lang == "CN" else "📊 Quantitative Decision Dashboard",
-    "top5_title": "🔥 强动能加仓标的 (TOP 5)" if lang == "CN" else "🔥 Top 5 High-Score Momentum Assets",
+    "board_title": "📊 实时策略决策核心看板" if lang == "CN" else "📊 Real-Time Quantitative Decision Radar",
+    "top5_title": "🔥 高得分绝对主力加仓标的 (TOP 5)" if lang == "CN" else "🔥 Alpha Seekers: Top 5 High-Score Momentum",
 }
 
-st.title(ui_meta["title"])
-st.caption(ui_meta["caption"])
+# 渲染高规格大气的 HTML 流光标题
+st.markdown(f'<div class="terminal-title">{ui_meta["title"]}</div>', unsafe_allow_html=True)
+st.markdown(f'<div class="terminal-caption">{ui_meta["caption"]}</div>', unsafe_allow_html=True)
 
 if "raw_scan_results" not in st.session_state:
     st.session_state.raw_scan_results = None
@@ -263,9 +350,38 @@ user_failed = [f for f in st.session_state.failed_watchlist if f in custom_ticke
 if user_failed:
     st.sidebar.error(f"{ui_meta['err_fetch']} `{', '.join(user_failed)}`")
 
+# ==========================================
+# 🖥️ 第三部分：顶级大牌悬浮卡片与表格高亮渲染
+# ==========================================
+
 if st.session_state.raw_scan_results is not None and not st.session_state.raw_scan_results.empty:
     df_raw = st.session_state.raw_scan_results.copy()
 
+    # 渲染顶部悬浮卡片
+    high_alpha_count = len(df_raw[df_raw['Score'] >= 75])
+    risk_count = len(df_raw[df_raw['strat_raw'] == 'stop'])
+    
+    kpi_html = f"""
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <div class="kpi-label">{"MONITORED POOL / 资产池总数" if lang=="CN" else "MONITORED POOL"}</div>
+            <div class="kpi-value" style="color: #58a6ff;">{len(combined_tickers)}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-label">{"BULL ALPHA / 强多头标的" if lang=="CN" else "BULL ALPHA"}</div>
+            <div class="kpi-value" style="color: #56d364;">{high_alpha_count}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-card-inner">
+                <div class="kpi-label">{"RISK ALERT / 抛压清仓预警" if lang=="CN" else "RISK ALERT"}</div>
+                <div class="kpi-value" style="color: #ff7b72;">{risk_count}</div>
+            </div>
+        </div>
+    </div>
+    """
+    st.markdown(kpi_html, unsafe_allow_html=True)
+
+    # 动态翻译
     if lang == "EN":
         trans_trend = {"gold_cross": "🎯 Golden Cross", "dead_cross": "🚨 Death Cross", "bull": "📈 Bullish Trend", "bear": "📉 Bearish Momentum"}
         trans_level = {"breakout": "🚀 Breakout", "breakdown": "⚠️ Breakdown", "range": "Range Bound"}
@@ -332,27 +448,15 @@ if st.session_state.raw_scan_results is not None and not st.session_state.raw_sc
     final_render_df = display_df.rename(columns=rename_dict)
     target_strategy_col = rename_dict["Trading Strategy"]
 
-    st.subheader(ui_meta['board_title'])
+    # 使用纯正极客暗黑高亮渲染表格内部（暗黑色彩优化）
+    st.markdown(f'<div class="section-title">{ui_meta["board_title"]}</div>', unsafe_allow_html=True)
     
-    # 🔥 核心升级：改用三引号定义多行样式字符串，100% 免疫任何换行引起的报错！
     def style_strategy(val):
         val_str = str(val)
         if any(x in val_str for x in ["强力买入", "金叉", "黄金买点", "Strong Buy", "Golden Cross", "Golden Entry"]):
-            return """background-color: #e6f4ea; color: #137333; font-weight: bold;"""
+            return """background-color: #1f3a22; color: #56d364; font-weight: bold; border: 1px solid #238636;"""
         if any(x in val_str for x in ["低吸", "分批", "左侧", "Pullback Buy", "Left-Side Entry"]):
-            return """background-color: #f1f8e9; color: #558b2f; font-weight: bold;"""
+            return """background-color: #1b2f1c; color: #7fe98a; font-weight: bold;"""
         if any(x in val_str for x in ["假突破", "预警", "暂勿追", "Fake Out", "Avoid Chasing"]):
-            return """background-color: #fffde7; color: #f57f17; font-weight: bold;"""
-        if any(x in val_str for x in ["减仓", "止损", "Reduce", "Stop Loss"]):
-            return """background-color: #fce8e6; color: #c5221f; font-weight: bold;"""
-        return """"""
-    
-    styled_df = final_render_df.style.map(style_strategy, subset=[target_strategy_col])
-    
-    st.dataframe(styled_df, use_container_width=True, height=480)
-
-    st.subheader(ui_meta['top5_title'])
-    st.dataframe(final_render_df.head(5), use_container_width=True, height=210)
-
-st.sidebar.markdown("---")
-st.sidebar.info(ui_meta["title"] + " v3.0-Fixed")
+            return """background-color: #382e13; color: #e3b341; font-weight: bold;"""
+        if any(x
