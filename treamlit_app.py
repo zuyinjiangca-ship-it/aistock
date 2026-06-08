@@ -7,8 +7,37 @@ import time
 import yfinance as yf
 from tickers import TICKERS
 
+# 强制开启全球量化大屏全宽布局
+st.set_page_config(layout="wide")
+
+# 🔥 核心空间榨汁：注入极限紧凑型 CSS，强行剥离页面多余留白与大间距
+st.markdown("""
+    <style>
+    /* 极致压缩页面主容器四周的空白 */
+    .block-container {
+        padding-top: 0.5rem !important;
+        padding-bottom: 0rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    /* 压缩Streamlit组件之间的默认间距 */
+    [data-testid="stVerticalBlock"] {
+        gap: 0.3rem !important;
+    }
+    /* 让顶部的标题区域更加紧凑 */
+    h1 {
+        font-size: 1.8rem !important;
+        margin-bottom: 0rem !important;
+        padding-bottom: 0rem !important;
+    }
+    p {
+        margin-bottom: 0.2rem !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # ==========================================
-# 🛠️ 第一部分：核心量化计算引擎 (支持多语言自适应)
+# 🛠️ 第一部分：核心量化计算引擎
 # ==========================================
 
 def get_secure_session():
@@ -47,38 +76,36 @@ def analyze_stock(ticker, lang):
     latest_close = float(close.iloc[-1])
     latest_vol = float(volume.iloc[-1])
 
-    # 1. 语言字典硬核注入
     if lang == "EN":
         t_cross_up, t_cross_down, t_bull, t_bear = "🎯 Golden Cross", "🚨 Death Cross", "📈 Bullish Trend", "📉 Bearish Momentum"
-        l_breakout, l_breakdown, l_range = "🚀 Resistance Breakout", "⚠️ Support Breakdown", "Range Bound"
-        v_up, v_down, v_low, v_norm = "🔥 High Vol Surge", "💥 High Vol Dump", "💤 Decreasing Vol", "Normal"
-        s_stop = "🚨 Reduce Position / Stop Loss"
-        s_strong_buy = "🦅 Strong Buy / Add on Breakout"
-        s_fake = "👀 Fake Breakout / Avoid Chasing"
-        s_golden = "👑 Golden Entry / Strong Accumulation"
-        s_scale_in = "📥 Left-Side Entry / Scale In"
-        s_tentative = "🏹 Tentative Entry / Open Long"
-        s_pullback = "📥 Pullback Buy / Buy the Dip"
-        s_hold = "👌 Good Trend / Hold Firm"
-        s_wait = "⏳ Consolidation / Wait and See"
+        l_breakout, l_breakdown, l_range = "🚀 Breakout", "⚠️ Breakdown", "Range Bound"
+        v_up, v_down, v_low, v_norm = "🔥 Vol Surge", "💥 Vol Dump", "💤 Declining", "Normal"
+        s_stop = "🚨 Reduce / Stop Loss"
+        s_strong_buy = "🦅 Strong Buy / Add"
+        s_fake = "👀 Fake Out / No Chase"
+        s_golden = "👑 Golden Entry"
+        s_scale_in = "📥 Scale In (Left)"
+        s_tentative = "🏹 Open Long"
+        s_pullback = "📥 Buy the Dip"
+        s_hold = "👌 Trend Ok / Hold"
+        s_wait = "⏳ Wait & See"
     else:
         t_cross_up, t_cross_down, t_bull, t_bear = "🎯 金叉启动", "🚨 死叉确立", "📈 多头趋势", "📉 空头动能"
         l_breakout, l_breakdown, l_range = "🚀 突破阻力", "⚠️ 跌破支撑", "区间震荡"
         v_up, v_down, v_low, v_norm = "🔥 放量上涨", "💥 放量下跌", "💤 缩量", "正常"
-        s_stop = "🚨 坚决减仓 / 右侧止损"
-        s_strong_buy = "🦅 强力买入 / 主升浪加仓"
-        s_fake = "👀 假突破预警 / 暂勿追高"
-        s_golden = "👑 黄金买点 / 强力左侧布局"
-        s_scale_in = "📥 左侧潜伏区 / 步兵分批试探"
-        s_tentative = "🏹 试探性建仓 / 开多"
-        s_pullback = "📥 缩量回踩 / 逢低分批买入"
-        s_hold = "👌 趋势良好 / 坚定持股"
-        s_wait = "⏳ 震荡蓄势 / 观望为宜"
+        s_stop = "🚨 坚决减仓 / 止损"
+        s_strong_buy = "🦅 强力买入 / 加仓"
+        s_fake = "👀 假突破 / 暂勿追"
+        s_golden = "👑 黄金买点 / 左侧"
+        s_scale_in = "📥 左侧潜伏 / 分批"
+        s_tentative = "🏹 试探建仓 / 开多"
+        s_pullback = "📥 缩量回踩 / 低吸"
+        s_hold = "👌 趋势良好 / 持股"
+        s_wait = "⏳ 震荡蓄势 / 观望"
 
-    # 2. 均线趋势交叉 (Trend)
+    # 均线趋势
     df['EMA_9'] = close.ewm(span=9, adjust=False).mean()
     df['SMA_24'] = close.rolling(window=24).mean()
-    
     ema_9_now = float(df['EMA_9'].iloc[-1])
     sma_24_now = float(df['SMA_24'].iloc[-1])
     ema_9_prev = float(df['EMA_9'].iloc[-2])
@@ -93,7 +120,7 @@ def analyze_stock(ticker, lang):
     else:
         trend_status_raw = "bear"; trend_status = t_bear
 
-    # 3. RSI (14) 动态分析
+    # RSI (14)
     delta = close.diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
@@ -105,13 +132,13 @@ def analyze_stock(ticker, lang):
     
     rsi_trend = f"🔺+{round(rsi_change, 1)}" if rsi_change > 0 else f"🔻{round(rsi_change, 1)}"
     if rsi_now >= 70:
-        rsi_advice = f"{round(rsi_now, 1)} | 🔥超买预警" if lang == "CN" else f"{round(rsi_now, 1)} | 🔥 Overbought"
+        rsi_advice = f"{round(rsi_now, 1)} | 🔥超买" if lang == "CN" else f"{round(rsi_now, 1)} | 🔥OB"
     elif rsi_now <= 30:
-        rsi_advice = f"{round(rsi_now, 1)} | 🛡️超卖洼地" if lang == "CN" else f"{round(rsi_now, 1)} | 🛡️ Oversold"
+        rsi_advice = f"{round(rsi_now, 1)} | 🛡️超卖" if lang == "CN" else f"{round(rsi_now, 1)} | 🛡️OS"
     else:
-        rsi_advice = f"{round(rsi_now, 1)} | 🧭中性({rsi_trend})" if lang == "CN" else f"{round(rsi_now, 1)} | 🧭 Neutral({rsi_trend})"
+        rsi_advice = f"{round(rsi_now, 1)} | ({rsi_trend})"
 
-    # 4. 布林带与斐波那契融合算法
+    # 布林带与斐波那契
     df['BB_mid'] = close.rolling(window=20).mean()
     df['BB_std'] = close.rolling(window=20).std()
     df['BB_lower'] = df['BB_mid'] - (2 * df['BB_std'])
@@ -133,10 +160,9 @@ def analyze_stock(ticker, lang):
     else:
         level_status_raw = "range"; level_status = l_range
 
-    # 5. 机构防御推荐买入价
     suggested_buy_price = round(support * 1.015, 2)
 
-    # 6. 量价追踪
+    # 量价
     df['Vol_SMA20'] = volume.rolling(window=20).mean()
     avg_vol = float(df['Vol_SMA20'].iloc[-1])
     price_change = latest_close - float(close.iloc[-2])
@@ -151,7 +177,7 @@ def analyze_stock(ticker, lang):
     else:
         vol_status = v_norm
 
-    # 7. 综合评分
+    # 评分
     score = 50
     if trend_status_raw == "gold_cross": score += 25
     elif trend_status_raw == "bull": score += 15
@@ -162,7 +188,7 @@ def analyze_stock(ticker, lang):
     elif is_vol_dump: score -= 10
     score = max(10, min(95, score))
 
-    # 8. 自动化策略决策矩阵（多语言解耦）
+    # 策略执行
     if is_vol_dump and (trend_status_raw == "dead_cross" or level_status_raw == "breakdown"):
         strategy = s_stop
     elif level_status_raw == "breakout" and is_vol_surge and score >= 80:
@@ -177,7 +203,7 @@ def analyze_stock(ticker, lang):
     elif trend_status_raw == "gold_cross" and not is_vol_dump:
         strategy = s_tentative
     elif trend_status_raw == "bull" and latest_close <= support * 1.04:
-        strategy = "📥 Pullback Buy / Buy the Dip" if lang == "EN" else "📥 缩量回踩 / 逢低分批买入"
+        strategy = "📥 Buy the Dip" if lang == "EN" else "📥 低吸买入"
     elif trend_status_raw == "bull" and vol_status == v_norm:
         strategy = s_hold
     else:
@@ -200,38 +226,32 @@ def analyze_stock(ticker, lang):
     }
 
 # ==========================================
-# 🖥️ 第二部分：前端数据渲染交互主控 (支持双语无缝切换)
+# 🖥️ 第二部分：前端数据渲染交互主控
 # ==========================================
 
-# 🌐 侧边栏高规格多语言切换按钮
 lang_choice = st.sidebar.radio("🌐 Language / 语言切换", ["🇨🇳 中文", "🇺🇸 English"])
 lang = "EN" if lang_choice == "🇺🇸 English" else "CN"
 
-# 动态翻译前台文案字典
 ui_meta = {
     "title": "🚀 AI Trading System Pro",
-    "caption": "顶级投行专供：动态书签记忆终端 | RSI动能追踪与推荐买点全自动化系统" if lang == "CN" else "Institutional Grade: Dynamic Bookmarked Terminal | RSI Momentum Stream & Automated Buy Price Matrix",
-    "ctrl_panel": "⚙️ 终端控制台" if lang == "CN" else "⚙️ Terminal Control",
-    "manage_pool": "➕ 动态管理监控池" if lang == "CN" else "➕ Manage Watchlist",
-    "input_label": "在此输入想追加的股票或ETF（多个用逗号或空格隔开）:" if lang == "CN" else "Add custom Tickers or ETFs (separate with commas or spaces):",
-    "input_help": "美股ETF直接输(如SOXX)；加股资产请加后缀(如VFV.TO)" if lang == "CN" else "US ETFs type directly (e.g., SOXX); Canadian assets require suffix (e.g., VFV.TO)",
-    "stat_text": "📊 当前雷达监控总数：" if lang == "CN" else "📊 Total Assets Monitored: ",
-    "stat_unit": " 只核心资产" if lang == "CN" else " symbols",
-    "err_fetch": "⚠️ 以下资产未成功拉取行情:" if lang == "CN" else "⚠️ Failed to fetch market data for:",
-    "btn_scan": "开始扫描" if lang == "CN" else "Start Radar Scan",
-    "spinner_text": "高级多维决策引擎解算中..." if lang == "CN" else "Decompressing multi-dimensional decision matrix...",
-    "data_feed_err": "⚠️ 数据源暂时受限，请稍后再试。" if lang == "CN" else "⚠️ Market data feed restricted. Please retry shortly.",
-    "board_title": "📊 实时多维策略决策看板" if lang == "CN" else "📊 Real-Time Quantitative Decision Dashboard",
-    "top5_title": "🔥 今日高权值核心加仓标的 (TOP 5)" if lang == "CN" else "🔥 Top 5 High-Score Momentum Assets",
-    "tip_title": "💾 资产永久留存绝招" if lang == "CN" else "💾 Permanent Bookmarking Tip",
-    "tip_desc": "输入您想追加的股票/ETF组合后，**直接将当前的浏览器网页收藏为书签**。下次从手机或电脑书签直接打开，即可实现免代码永久保留自选池！" if lang == "CN" else "After adding your custom tickers, **bookmark this page directly in your browser**. Opening the bookmark from any device will instantly load your saved watchlists without code!"
+    "caption": "顶级投行专供：一屏锁死高紧凑自适应版" if lang == "CN" else "Institutional Grade: Compact Screen Lock Edition",
+    "ctrl_panel": "⚙️ 控制台" if lang == "CN" else "⚙️ Console",
+    "manage_pool": "➕ 管理监控池" if lang == "CN" else "➕ Watchlist",
+    "input_label": "输入追加标的（逗号/空格隔开）:" if lang == "CN" else "Add Tickers (use comma/space):",
+    "input_help": "美股直输(如SOXX); 加股加后缀(如VFV.TO)" if lang == "CN" else "e.g., SOXX, VFV.TO",
+    "stat_text": "📊 监控数：" if lang == "CN" else "📊 Total: ",
+    "stat_unit": " 只" if lang == "CN" else " symbols",
+    "err_fetch": "⚠️ 失败标的:" if lang == "CN" else "⚠️ Failed:",
+    "btn_scan": "开始扫描" if lang == "CN" else "Radar Scan",
+    "spinner_text": "量化矩阵解算中..." if lang == "CN" else "Processing Matrix...",
+    "data_feed_err": "⚠️ 数据源受限。" if lang == "CN" else "⚠️ Data Restricted.",
+    "board_title": "📊 实时策略决策看板 (内含布林与斐波那契)" if lang == "CN" else "📊 Quantitative Decision Dashboard",
+    "top5_title": "🔥 强动能加仓标的 (TOP 5)" if lang == "CN" else "🔥 Top 5 High-Score Momentum Assets",
 }
 
-# 渲染全局基础标题
 st.title(ui_meta["title"])
 st.caption(ui_meta["caption"])
 
-# URL 记忆加载模块
 url_params = st.query_params.get_all("tickers")
 default_text = url_params[0] if url_params else ""
 
@@ -239,7 +259,7 @@ st.sidebar.markdown("---")
 st.sidebar.header(ui_meta["ctrl_panel"])
 st.sidebar.subheader(ui_meta["manage_pool"])
 
-user_input = st.sidebar.text_area(ui_meta["input_label"], value=default_text, help=ui_meta["input_help"])
+user_input = st.sidebar.text_area(ui_meta["input_label"], value=default_text, help=ui_meta["input_help"], height=100)
 
 if user_input != default_text:
     if user_input.strip():
@@ -254,7 +274,6 @@ if user_input:
 combined_tickers = list(dict.fromkeys(TICKERS + custom_tickers))
 st.sidebar.write(f"{ui_meta['stat_text']}`{len(combined_tickers)}`{ui_meta['stat_unit']}")
 
-# 🛡️ 核心大坑修复：将 lang 参数并入缓存签名，确保切语言时瞬间爆破旧缓存
 @st.cache_data(ttl=600)
 def run_scan_with_feedback(tickers_list, lang_flag):
     results = []
@@ -276,14 +295,13 @@ if st.button(ui_meta["btn_scan"], type="primary"):
 
         user_failed = [f for f in failed_tickers if f in custom_tickers]
         if user_failed:
-            st.sidebar.error(f"{ui_meta['err_fetch']}\n`{', '.join(user_failed)}`")
+            st.sidebar.error(f"{ui_meta['err_fetch']} `{', '.join(user_failed)}`")
 
         if df.empty:
             st.warning(ui_meta["data_feed_err"])
         else:
             df = df.sort_values(by="Score", ascending=False).reset_index(drop=True)
 
-            # 顶级排盘规范顺序
             columns_order = [
                 "Ticker", "Price", "Suggested Buy Price", "Score", "Trading Strategy", 
                 "Trend", "Position Level", "Volume Status", "RSI Status & Advice",
@@ -292,17 +310,16 @@ if st.button(ui_meta["btn_scan"], type="primary"):
             existing_columns = [col for col in columns_order if col in df.columns]
             df = df[existing_columns]
 
-            # 🎯 核心高阶动作：动态将 DataFrame 英文列名一键转换为对应语言
             rename_dict = {
                 "Ticker": "Ticker" if lang == "EN" else "代码",
                 "Price": "Price" if lang == "EN" else "当前价",
-                "Suggested Buy Price": "Suggested Buy Price" if lang == "EN" else "推荐买入价",
-                "Score": "Score" if lang == "EN" else "综合评分",
-                "Trading Strategy": "Trading Strategy" if lang == "EN" else "交易策略",
+                "Suggested Buy Price": "Suggested Buy" if lang == "EN" else "推荐买入价",
+                "Score": "Score" if lang == "EN" else "评分",
+                "Trading Strategy": "Strategy" if lang == "EN" else "交易策略",
                 "Trend": "Trend" if lang == "EN" else "均线趋势",
-                "Position Level": "Position Level" if lang == "EN" else "关键位置",
-                "Volume Status": "Volume Status" if lang == "EN" else "量态状态",
-                "RSI Status & Advice": "RSI Status & Advice" if lang == "EN" else "RSI状态与建议",
+                "Position Level": "Level" if lang == "EN" else "关键位置",
+                "Volume Status": "Volume" if lang == "EN" else "量态状态",
+                "RSI Status & Advice": "RSI Status" if lang == "EN" else "RSI状态与建议",
                 "9 EMA": "9 EMA", "24 SMA": "24 SMA",
                 "Support": "Support" if lang == "EN" else "核心支撑",
                 "Resistance": "Resistance" if lang == "EN" else "核心阻力"
@@ -311,27 +328,44 @@ if st.button(ui_meta["btn_scan"], type="primary"):
             display_df = df.rename(columns=rename_dict)
             target_strategy_col = rename_dict["Trading Strategy"]
 
-            st.subheader(ui_meta["board_title"])
+            # 使用 Markdown 小三级标题代替 st.subheader，腾出大量纵向像素
+            st.markdown(f"##### {ui_meta['board_title']}")
             
-            # 双语通用高亮色彩逻辑
             def style_strategy(val):
                 val_str = str(val)
                 if any(x in val_str for x in ["强力买入", "金叉", "黄金买点", "Strong Buy", "Golden Cross", "Golden Entry"]):
                     return 'background-color: #e6f4ea; color: #137333; font-weight: bold;'
-                if any(x in val_str for x in ["逢低分批", "左侧潜伏", "Pullback Buy", "Left-Side Entry"]):
+                if any(x in val_str for x in ["低吸", "分批", "左侧", "Pullback Buy", "Left-Side Entry"]):
                     return 'background-color: #f1f8e9; color: #558b2f; font-weight: bold;'
-                if any(x in val_str for x in ["假突破", "预警", "暂勿追高", "Fake Breakout", "Avoid Chasing"]):
+                if any(x in val_str for x in ["假突破", "预警", "暂勿追", "Fake Out", "Avoid Chasing"]):
                     return 'background-color: #fffde7; color: #f57f17; font-weight: bold;'
                 if "减仓" in val_str or "止损" in val_str or "Reduce" in val_str or "Stop Loss" in val_str:
                     return 'background-color: #fce8e6; color: #c5221f; font-weight: bold;'
                 return ''
             
             styled_df = display_df.style.map(style_strategy, subset=[target_strategy_col])
-            st.dataframe(styled_df, width='stretch', height=620)
+            
+            # 🔥 核心锁死：强行配置列宽（小尺寸列锁死），并将主表格高度限制在 380，杜绝全网页拖拽
+            col_config = {
+                rename_dict["Ticker"]: st.column_config.TextColumn(width="small"),
+                rename_dict["Price"]: st.column_config.NumberColumn(width="small"),
+                rename_dict["Suggested Buy Price"]: st.column_config.NumberColumn(width="small"),
+                rename_dict["Score"]: st.column_config.NumberColumn(width="small"),
+                rename_dict["Trading Strategy"]: st.column_config.TextColumn(width="medium"),
+                rename_dict["Trend"]: st.column_config.TextColumn(width="small"),
+                rename_dict["Position Level"]: st.column_config.TextColumn(width="small"),
+                rename_dict["Volume Status"]: st.column_config.TextColumn(width="small"),
+                rename_dict["RSI Status & Advice"]: st.column_config.TextColumn(width="medium"),
+                "9 EMA": st.column_config.NumberColumn(width="small"),
+                "24 SMA": st.column_config.NumberColumn(width="small"),
+                rename_dict["Support"]: st.column_config.NumberColumn(width="small"),
+                rename_dict["Resistance"]: st.column_config.NumberColumn(width="small"),
+            }
+            
+            st.dataframe(styled_df, width='stretch', height=380, column_config=col_config)
 
-            st.subheader(ui_meta["top5_title"])
-            st.dataframe(display_df.head(5), width='stretch')
+            st.markdown(f"##### {ui_meta['top5_title']}")
+            st.dataframe(display_df.head(5), width='stretch', height=160, column_config=col_config)
 
 st.sidebar.markdown("---")
-st.sidebar.subheader(ui_meta["tip_title"])
-st.sidebar.info(ui_meta["tip_desc"])
+st.sidebar.info(ui_meta["title"] + " v2.0")
