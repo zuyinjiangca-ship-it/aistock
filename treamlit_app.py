@@ -6,15 +6,14 @@ import requests
 import time
 import yfinance as yf
 
-# 📊 老板最新精简常驻资产池（共51只核心聚焦标的）
+# 📊 老板最新修正的45只全量精密常驻资产池（已剔除过载标的，校正代码）
 TICKERS = [
     "COHU", "VECO", "ENTG", "UCTT", "ICHR", "AXTI", "WOLF", "POWI", 
     "AOSL", "MTSI", "AMAT", "KLAC", "CIFR", "WULF", "HUT", "FLNC", 
     "CIEN", "SMTC", "CRDO", "TXN", "ON", "MCHP", "GFS", "JBL", 
-    "HIMX", "ALAB", "NOK", "TE", "ENPH", "VPG", "NVTS", "AEHR", 
-    "AMKR", "ASX", "PL", "ARM", "ANET", "TTMI", "BE", "NBIS", 
-    "IREN", "TSEM", "AMZN", "LRCX", "AVGO", "MRVL", "AAOI", "COHR", 
-    "ETN", "VRT", "INTC"
+    "HIMX", "ALAB", "NOK", "TEL", "ENPH", "VPG", "NVTS", "AEHR", 
+    "AMKR", "ASX", "PL", "ARM", "BE", "TSEM", "AMZN", "LRCX", 
+    "AAOI", "COHR", "ETN", "VRT", "INTC"
 ]
 
 # 开启全球量化大屏全宽布局
@@ -40,7 +39,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🛠️ 第一部分：核心纯量化数据引擎 (计算与语言完全解耦)
+# 🛠️ 第一部分：核心纯量化数据引擎 (内存级数据切片)
 # ==========================================
 
 def get_secure_session():
@@ -50,22 +49,7 @@ def get_secure_session():
     })
     return session
 
-def get_data(ticker, session, retries=3):
-    for _ in range(retries):
-        try:
-            df = yf.download(ticker, period="1y", progress=False, session=session)
-            if not df.empty:
-                if isinstance(df.columns, pd.MultiIndex):
-                    df.columns = df.columns.get_level_values(0)
-                return df
-        except:
-            time.sleep(0.5)
-    return None
-
-def analyze_stock_raw(ticker):
-    session = get_secure_session()
-    df = get_data(ticker, session)
-
+def analyze_stock_from_df(ticker, df):
     if df is None or df.empty:
         return None
 
@@ -212,7 +196,7 @@ ui_meta = {
     "stat_unit": " 只" if lang == "CN" else " symbols",
     "err_fetch": "⚠️ 失败标的（请检查代码或网络）:" if lang == "CN" else "⚠️ Failed Tickers:",
     "btn_scan": "开始扫描" if lang == "CN" else "Radar Scan",
-    "spinner_text": "量化矩阵解算中..." if lang == "CN" else "Processing Matrix...",
+    "spinner_text": "量化批量合并总线解算中..." if lang == "CN" else "Processing Batch Matrix...",
     "board_title": "📊 实时策略决策看板" if lang == "CN" else "📊 Quantitative Decision Dashboard",
     "top5_title": "🔥 强动能加仓标的 (TOP 5)" if lang == "CN" else "🔥 Top 5 High-Score Momentum Assets",
 }
@@ -249,17 +233,35 @@ st.sidebar.write(f"{ui_meta['stat_text']}`{len(combined_tickers)}`{ui_meta['stat
 
 @st.cache_data(ttl=600)
 def run_full_heavy_scan(tickers_list):
+    session = get_secure_session()
     results = []
     failed = []
+    
+    try:
+        # 🚀 降维打击核心：全量个股 45合1 单次打包下载，彻底碾碎雅虎频控限制
+        all_data = yf.download(tickers_list, period="1y", progress=False, session=session)
+    except:
+        return pd.DataFrame(), tickers_list
+
     for t in tickers_list:
         try:
-            res = analyze_stock_raw(t)
-            if res:
-                results.append(res)
+            # 在内存中执行高频交叉切片 (.xs)，0毫秒无缝提取个股历史矩阵
+            if isinstance(all_data.columns, pd.MultiIndex):
+                ticker_df = all_data.xs(t, level=1, axis=1)
+            else:
+                ticker_df = all_data if len(tickers_list) == 1 else pd.DataFrame()
+            
+            if ticker_df is not None and not ticker_df.empty:
+                res = analyze_stock_from_df(t, ticker_df)
+                if res:
+                    results.append(res)
+                else:
+                    failed.append(t)
             else:
                 failed.append(t)
         except:
             failed.append(t)
+            
     return pd.DataFrame(results), failed
 
 if st.button(ui_meta["btn_scan"], type="primary"):
@@ -356,14 +358,12 @@ if st.session_state.raw_scan_results is not None and not st.session_state.raw_sc
     
     styled_df = final_render_df.style.map(style_strategy, subset=[target_strategy_col])
     
-    # 🎯 高度维持 760px，确保 20+ 行资产一屏拉直舒展，无需多余滚动
     st.dataframe(styled_df, use_container_width=True, height=760)
 
-    # 📥 纵向缓冲区，优雅下移加仓看板
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     st.subheader(ui_meta['top5_title'])
     st.dataframe(final_render_df.head(5), use_container_width=True, height=210)
 
 st.sidebar.markdown("---")
-st.sidebar.info(ui_meta["title"] + " v4.7-Streamlined")
+st.sidebar.info(ui_meta["title"] + " v5.0-TurboBatch")
