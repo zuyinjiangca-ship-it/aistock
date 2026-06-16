@@ -10,7 +10,7 @@ from tickers import TICKERS
 # 开启全球量化大屏全宽布局
 st.set_page_config(layout="wide")
 
-# 🎨 视觉平衡样式表
+# 🎨 视觉平衡样式表（保留老板最认可的经典原生视觉布局）
 st.markdown("""
     <style>
     .block-container {
@@ -30,7 +30,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 🛠️ 第一部分：核心纯量化数据引擎 (计算与语言完全解耦)
+# 🛠️ 第一部分：核心纯量化数据引擎 (强力集成实时校准总线)
 # ==========================================
 
 def get_secure_session():
@@ -54,10 +54,41 @@ def get_data(ticker, session, retries=3):
 
 def analyze_stock_raw(ticker):
     session = get_secure_session()
+    
+    # 1. 抓取大历史长线矩阵
     df = get_data(ticker, session)
-
     if df is None or df.empty:
         return None
+
+    # 🚀 【核心修复】强行启动实时价格秒级校准总线，碾碎盘后清算滞后
+    try:
+        df_live = yf.download(ticker, period="1d", progress=False, session=session)
+        if not df_live.empty:
+            if isinstance(df_live.columns, pd.MultiIndex):
+                df_live.columns = df_live.columns.get_level_values(0)
+            
+            live_price = float(df_live['Close'].iloc[-1])
+            live_vol = float(df_live['Volume'].iloc[-1])
+            live_date = df_live.index[-1].strftime('%Y-%m-%d')
+            last_hist_date = df.index[-1].strftime('%Y-%m-%d')
+            
+            if live_price > 0:
+                if last_hist_date != live_date:
+                    # 情况 A：如果大历史库还没生成今天的K线，硬核追加今天实时的秒级K线
+                    new_row = pd.DataFrame({
+                        'Open': [float(df_live['Open'].iloc[-1])],
+                        'High': [float(df_live['High'].iloc[-1])],
+                        'Low': [float(df_live['Low'].iloc[-1])],
+                        'Close': [live_price],
+                        'Volume': [live_vol]
+                    }, index=[df_live.index[-1]])
+                    df = pd.concat([df, new_row])
+                else:
+                    # 情况 B：如果已经有今天K线但价格滞后，强行用最新 116 实时全量覆盖
+                    df.iloc[-1, df.columns.get_loc('Close')] = live_price
+                    df.iloc[-1, df.columns.get_loc('Volume')] = live_vol
+    except:
+        pass # 极度恶劣网络下自动降级进入历史防崩溃状态
 
     df = df.dropna(subset=['Close'])
     if len(df) < 60:
@@ -348,14 +379,12 @@ if st.session_state.raw_scan_results is not None and not st.session_state.raw_sc
     
     styled_df = final_render_df.style.map(style_strategy, subset=[target_strategy_col])
     
-    # 🎯 改变高度至 760 像素，确保完美直显 20+ 行数据，消除多余滚动
     st.dataframe(styled_df, use_container_width=True, height=760)
 
-    # 📥 强行注入纵向间距缓冲区，优雅地将 TOP 5 标的向下推移
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     st.subheader(ui_meta['top5_title'])
     st.dataframe(final_render_df.head(5), use_container_width=True, height=210)
 
 st.sidebar.markdown("---")
-st.sidebar.info(ui_meta["title"] + " v3.0-Fixed")
+st.sidebar.info(ui_meta["title"] + " v4.0-LiveSynced")
