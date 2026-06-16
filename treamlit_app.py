@@ -5,12 +5,23 @@ import numpy as np
 import requests
 import time
 import yfinance as yf
-from tickers import TICKERS
+
+# 📊 老板专属：65只全球科技硬件与AI算力供应链常驻资产池
+TICKERS = [
+    "COHU", "VECO", "ENTG", "UCTT", "ICHR", "AXTI", "WOLF", "POWI", 
+    "AOSL", "MTSI", "AMAT", "KLAC", "CIFR", "WULF", "HUT", "FLNC", 
+    "CIEN", "SMTC", "CRDO", "STM", "BB", "TXN", "ON", "MCHP", 
+    "GFS", "JBL", "HIMX", "ALAB", "NOK", "TE", "ENPH", "VPG", 
+    "NVTS", "AEHR", "AMKR", "ASX", "PL", "ARM", "ANET", "TTMI", 
+    "BE", "CSCO", "NBIS", "IREN", "TSEM", "AMZN", "MXL", "LRCX", 
+    "TSM", "AMD", "FN", "AVGO", "MRVL", "GLW", "AAOI", "COHR", 
+    "LITE", "MU", "SNDK", "WDC", "ETN", "VRT", "GOOG", "CLS", "INTC"
+]
 
 # 开启全球量化大屏全宽布局
 st.set_page_config(layout="wide")
 
-# 🎨 视觉平衡样式表
+# 🎨 恢复老板最认可的经典原生视觉样式表
 st.markdown("""
     <style>
     .block-container {
@@ -36,7 +47,7 @@ st.markdown("""
 def get_secure_session():
     session = requests.Session()
     session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     })
     return session
 
@@ -196,14 +207,13 @@ ui_meta = {
     "caption": "顶级投行专供：常驻保险箱架构 | 0毫秒双语瞬切决策终端" if lang == "CN" else "Institutional Grade: Persistent Memory Terminal | 0-ms Multi-Asset Hot Swap Dashboard",
     "ctrl_panel": "⚙️ 控制台" if lang == "CN" else "⚙️ Console",
     "manage_pool": "➕ 管理监控池" if lang == "CN" else "➕ Watchlist",
-    "input_label": "输入追加标的（逗号/空格隔开）:" if lang == "CN" else "Add Tickers (use comma/space):",
-    "input_help": "美股直输(如SOXX); 加股加后缀(如VFV.TO)" if lang == "CN" else "e.g., SOXX, VFV.TO",
+    "input_label": "输入追加临时标的（逗号/空格隔开）:" if lang == "CN" else "Add Temporary Tickers:",
+    "input_help": "临时追加美股(如SOXX); 加股加后缀(如VFV.TO)" if lang == "CN" else "e.g., SOXX, VFV.TO",
     "stat_text": "📊 监控数：" if lang == "CN" else "📊 Total: ",
     "stat_unit": " 只" if lang == "CN" else " symbols",
     "err_fetch": "⚠️ 失败标的:" if lang == "CN" else "⚠️ Failed:",
     "btn_scan": "开始扫描" if lang == "CN" else "Radar Scan",
     "spinner_text": "量化矩阵解算中..." if lang == "CN" else "Processing Matrix...",
-    "data_feed_err": "⚠️ 数据源受限。" if lang == "CN" else "⚠️ Data Restricted.",
     "board_title": "📊 实时策略决策看板" if lang == "CN" else "📊 Quantitative Decision Dashboard",
     "top5_title": "🔥 强动能加仓标的 (TOP 5)" if lang == "CN" else "🔥 Top 5 High-Score Momentum Assets",
 }
@@ -235,6 +245,7 @@ custom_tickers = []
 if user_input:
     custom_tickers = [t.strip().upper() for t in user_input.replace("，", " ").replace(",", " ").split() if t.strip()]
 
+# 自动无缝融合常驻资产池与临时追加标的
 combined_tickers = list(dict.fromkeys(TICKERS + custom_tickers))
 st.sidebar.write(f"{ui_meta['stat_text']}`{len(combined_tickers)}`{ui_meta['stat_unit']}")
 
@@ -348,14 +359,14 @@ if st.session_state.raw_scan_results is not None and not st.session_state.raw_sc
     
     styled_df = final_render_df.style.map(style_strategy, subset=[target_strategy_col])
     
-    # 🎯 改变高度至 760 像素，确保完美直显 20+ 行数据，消除多余滚动
+    # 🎯 高度完美拉伸至 760px，确保一屏直接呈现 20+ 行核心资产
     st.dataframe(styled_df, use_container_width=True, height=760)
 
-    # 📥 强行注入纵向间距缓冲区，优雅地将 TOP 5 标的向下推移
+    # 📥 强行注入纵向间距缓冲区，优雅下移今日 TOP 5 加仓看板
     st.markdown("<br><br>", unsafe_allow_html=True)
 
     st.subheader(ui_meta['top5_title'])
     st.dataframe(final_render_df.head(5), use_container_width=True, height=210)
 
 st.sidebar.markdown("---")
-st.sidebar.info(ui_meta["title"] + " v3.0-Fixed")
+st.sidebar.info(ui_meta["title"] + " v4.5-HeavyPool")
